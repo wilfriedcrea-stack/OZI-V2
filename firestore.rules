@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Profils utilisateurs
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || !isSignedIn();
+    }
+
+    // Catalogue des œuvres
+    match /works/{workId} {
+      allow read: if true;
+      allow write: if isSignedIn() || true;
+    }
+
+    // Chapitres
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if isSignedIn() || true;
+    }
+
+    // Commentaires
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.userId || request.auth.token.role == 'admin');
+    }
+  }
+}

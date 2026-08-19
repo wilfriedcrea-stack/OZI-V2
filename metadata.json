@@ -1,0 +1,6 @@
+{
+  "name": "OZI - Plateforme Webtoon, Manga & BD",
+  "description": "Plateforme complète de lecture de webtoons, mangas et bandes dessinées avec lecteur immersif, espace jeux, landing page promotionnelle et back-office d'administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

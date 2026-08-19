@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "User accounts, balances and preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "role": { "type": "string" },
+        "coins": { "type": "number" },
+        "favorites": { "type": "array", "items": { "type": "string" } },
+        "readingHistory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "workId": { "type": "string" },
+              "chapterId": { "type": "string" },
+              "progress": { "type": "number" },
+              "lastReadAt": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "username", "role", "coins"]
+    },
+    "works": {
+      "title": "Webtoons & Comics",
+      "description": "Works catalog, series metadata and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "originalTitle": { "type": "string" },
+        "author": { "type": "string" },
+        "artist": { "type": "string" },
+        "synopsis": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "genres": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string" },
+        "rating": { "type": "number" },
+        "views": { "type": "number" },
+        "likes": { "type": "number" },
+        "totalChapters": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "isFree": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "author", "synopsis", "coverUrl", "genres", "status"]
+    },
+    "chapters": {
+      "title": "Chapters",
+      "description": "Episodes of webtoons with images and dialog panels",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "workId": { "type": "string" },
+        "chapterNumber": { "type": "number" },
+        "title": { "type": "string" },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pageNumber": { "type": "number" },
+              "imageUrl": { "type": "string" },
+              "altText": { "type": "string" },
+              "narration": { "type": "string" },
+              "character": { "type": "string" },
+              "speech": { "type": "string" },
+              "sfx": { "type": "string" }
+            }
+          }
+        },
+        "isFree": { "type": "boolean" },
+        "coinCost": { "type": "number" },
+        "likesCount": { "type": "number" },
+        "releaseDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "workId", "chapterNumber", "title", "pages"]
+    },
+    "comments": {
+      "title": "Comments",
+      "description": "User comments on chapters and series",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "workId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "number" },
+        "isSpoiler": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "chapterId", "userId", "userName", "content", "createdAt"]
+    }
+  }
+}
