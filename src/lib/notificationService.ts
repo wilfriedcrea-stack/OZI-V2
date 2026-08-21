@@ -23,6 +23,39 @@ class NotificationService {
     this.isNative = Capacitor.isNativePlatform();
     this.isPushSupported = this.isNative;
     this.loadLocalHistory();
+    this.initChannels();
+  }
+
+  private async initChannels() {
+    try {
+      if (this.isNative) {
+        // Création du canal de notification Android haute importance
+        await LocalNotifications.createChannel({
+          id: 'ozi_releases',
+          name: 'Nouveaux Chapitres & Sorties',
+          description: 'Alertes lors de la parution de nouveaux épisodes',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          sound: 'beep.wav',
+          lights: true,
+          lightColor: '#ff5a50',
+        });
+
+        await LocalNotifications.createChannel({
+          id: 'ozi_activity',
+          name: 'Activité & Pièces',
+          description: 'Recharges de pièces et réponses aux commentaires',
+          importance: 4,
+          visibility: 1,
+          vibration: true,
+          lights: true,
+          lightColor: '#ff5a50',
+        });
+      }
+    } catch (e) {
+      console.warn('Erreur création canaux notifications:', e);
+    }
   }
 
   private loadLocalHistory() {
@@ -188,13 +221,15 @@ class NotificationService {
     // 2. Notification système / device
     try {
       if (this.isNative) {
+        const channelId = type === 'chapter' ? 'ozi_releases' : 'ozi_activity';
         await LocalNotifications.schedule({
           notifications: [
             {
-              id: Math.floor(Math.random() * 100000),
+              id: Math.floor(Math.random() * 100000) + 1,
               title,
               body,
-              schedule: { at: new Date(Date.now() + 500) },
+              schedule: { at: new Date(Date.now() + 200) },
+              channelId,
               smallIcon: 'ic_stat_icon_config_sample',
               iconColor: '#ff5a50',
               extra: data,

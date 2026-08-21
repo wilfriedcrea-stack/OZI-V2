@@ -74,6 +74,9 @@ export const MobileAppExperience: React.FC = () => {
   const [playingGame, setPlayingGame] = useState<Game | null>(null);
 
   React.useEffect(() => {
+    // Initialiser les permissions système pour que les notifications s'affichent hors de l'application
+    notificationService.requestPermissions();
+
     const unsub = notificationService.subscribe((list) => {
       setUnreadNotifsCount(list.filter((n) => !n.read).length);
     });
