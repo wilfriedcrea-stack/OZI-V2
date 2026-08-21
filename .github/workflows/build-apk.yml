@@ -3,18 +3,7 @@ name: 🚀 Build & Release OZI Android APK
 on:
   push:
     branches: [ "main", "master" ]
-  release:
-    types: [published, created]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Type de build'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
 
 permissions:
   contents: write
@@ -28,20 +17,18 @@ jobs:
       - name: 📥 Récupérer le code source
         uses: actions/checkout@v4
 
-      - name: ☕ Configurer Java JDK 21
+      - name: ☕ Configurer Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
-          cache: 'gradle'
+          java-version: '17'
 
       - name: 🟢 Configurer Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: 📦 Installer les dépendances NPM
+      - name: 📦 Installer les dépendances
         run: |
           npm install --legacy-peer-deps
 
@@ -63,7 +50,7 @@ jobs:
           ./gradlew assembleDebug --stacktrace
           cd ..
 
-      - name: 📤 Exporter l'APK en Artifact
+      - name: 📤 Exporter l'APK Téléchargeable
         uses: actions/upload-artifact@v4
         with:
           name: ozi-webtoon-apk
