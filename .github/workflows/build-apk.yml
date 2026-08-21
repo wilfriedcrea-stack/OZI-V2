@@ -4,16 +4,6 @@ on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Type de build'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
-          - both
 
 permissions:
   contents: write
@@ -27,18 +17,23 @@ jobs:
       - name: 📥 Récupérer le code source
         uses: actions/checkout@v4
 
-      - name: ☕ Configurer Java JDK 21 (Requis par Gradle 8.14)
+      - name: ☕ Configurer Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: 🟢 Configurer Node.js 22 (Requis par Capacitor 8)
+      - name: 🐘 Configurer Gradle 8.14
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: 🟢 Configurer Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: 📦 Installer les dépendances
+      - name: 📦 Installer les dépendances NPM
         run: |
           npm install --legacy-peer-deps
 
@@ -50,14 +45,10 @@ jobs:
         run: |
           npx cap sync android
 
-      - name: 🔑 Rendre Gradlew exécutable
-        run: |
-          chmod +x ./android/gradlew
-
       - name: ⚙️ Compiler l'APK Android
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          gradle assembleDebug --no-daemon --stacktrace
           cd ..
 
       - name: 📤 Exporter l'APK Téléchargeable
