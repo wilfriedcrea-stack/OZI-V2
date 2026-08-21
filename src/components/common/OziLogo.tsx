@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { OZI_LOGO_URL } from '../../assets/oziLogoBase64';
 
 interface OziLogoProps {
   className?: string;
@@ -14,26 +15,26 @@ export const OziLogo: React.FC<OziLogoProps> = ({
   const [imgError, setImgError] = useState(false);
 
   const sizeClasses = {
-    xs: 'h-6 w-auto max-w-[80px]',
-    sm: 'h-8 sm:h-9 w-auto max-w-[120px]',
-    md: 'h-10 sm:h-11 w-auto max-w-[150px]',
-    lg: 'h-14 sm:h-16 w-auto max-w-[220px]',
-    xl: 'h-20 sm:h-24 w-auto max-w-[300px]',
+    xs: 'h-8 w-auto max-w-[100px]',
+    sm: 'h-11 sm:h-12 w-auto max-w-[150px]',
+    md: 'h-14 sm:h-16 w-auto max-w-[200px]',
+    lg: 'h-20 sm:h-24 w-auto max-w-[280px]',
+    xl: 'h-28 sm:h-32 w-auto max-w-[380px]',
   }[size];
 
   const iconSizes = {
-    xs: 'w-6 h-6',
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-14 h-14',
-    xl: 'w-20 h-20',
+    xs: 'w-8 h-8',
+    sm: 'w-11 h-11',
+    md: 'w-14 h-14',
+    lg: 'w-20 h-20',
+    xl: 'w-28 h-28',
   }[size];
 
   return (
     <div className={`inline-flex items-center gap-2 select-none ${className}`}>
       {!imgError ? (
         <img
-          src="/images/ozi-logo.png"
+          src={OZI_LOGO_URL || '/images/ozi-logo.png'}
           alt="OZI Logo"
           onError={() => {
             setImgError(true);
@@ -48,15 +49,15 @@ export const OziLogo: React.FC<OziLogoProps> = ({
               <div className="w-2 h-2 rounded-full bg-white"></div>
             </div>
           </div>
-          <span className="font-black text-white text-lg tracking-tight font-['Outfit',sans-serif]">
+          <span className="font-black text-white text-lg tracking-tight font-almodobar">
             O<span className="text-[#FF5A50]">Z</span>I
           </span>
         </div>
       )}
 
       {showText && !imgError && (
-        <span className="font-extrabold tracking-tight text-white font-['Outfit',sans-serif] text-base leading-none hidden sm:inline-block">
-          OZI<span className="text-[#ff5a50] font-normal text-xs ml-1">Webtoon</span>
+        <span className="font-extrabold tracking-tight text-white font-almodobar text-base leading-none hidden sm:inline-block">
+          OZI<span className="text-[#ff5a50] font-normal text-xs ml-1 font-sans">Webtoon</span>
         </span>
       )}
     </div>

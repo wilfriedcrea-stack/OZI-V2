@@ -174,11 +174,18 @@ export const MobileAppExperience: React.FC = () => {
       <div className="min-h-screen bg-[#07080c] text-white flex flex-col max-w-md mx-auto border-x border-white/5 pb-20">
         <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
           <button
-            onClick={() => setActiveView('app_catalogue')}
+            onClick={() => {
+              if (selectedArticleId) {
+                setSelectedArticleId(null);
+              } else {
+                setActiveView('app_catalogue');
+                setActiveTab('home');
+              }
+            }}
             className="text-slate-300 hover:text-white p-2 flex items-center gap-1.5 text-xs font-bold tap-active cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
+            <span>{selectedArticleId ? 'Retour aux actus' : 'Accueil'}</span>
           </button>
           <OziLogo size="sm" />
           <div className="w-8" />

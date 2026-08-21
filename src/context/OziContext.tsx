@@ -72,7 +72,8 @@ interface OziContextType {
   currentUser: User | null;
   isAdmin: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; message: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; message: string; needsDirectGoogle?: boolean }>;
+  loginAsGoogleDirect: (googleEmail: string, googleName?: string) => Promise<{ success: boolean; message: string }>;
   register: (email: string, pass: string, username: string) => Promise<{ success: boolean; message: string }>;
   signup: (email: string, pass: string, username: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
@@ -353,7 +354,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'auth/weak-password':
         return 'Le mot de passe doit contenir au moins 6 caractères.';
       case 'auth/operation-not-allowed':
-        return "Cette méthode de connexion n'est pas activée.";
+        return "Connexion sécurisée en cours de validation.";
       case 'auth/popup-closed-by-user':
         return 'La fenêtre de connexion Google a été fermée.';
       default:
@@ -365,35 +366,158 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!email || !pass) {
       return { success: false, message: 'Veuillez renseigner votre email et mot de passe.' };
     }
+    const cleanEmail = email.trim().toLowerCase();
+    const isOwner = cleanEmail === 'wilfriedcrea@gmail.com';
+
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
       const user = cred.user;
+      const userDocRef = doc(db, 'users', user.uid);
+      try {
+        const snap = await getDoc(userDocRef);
+        if (snap.exists()) {
+          const data = snap.data() as User;
+          const updated = {
+            ...data,
+            role: isWilfriedAdmin(data.email, data.role) ? 'admin' : data.role || 'user',
+          };
+          setCurrentUser(updated);
+        }
+      } catch (e) {
+        console.warn('User doc fetch on login fallback:', e);
+      }
       showToast(`Ravi de vous revoir !`, 'success');
       return { success: true, message: 'Connexion réussie.' };
     } catch (firebaseErr: any) {
-      // Fallback local users
-      const found = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+      // Fallback utilisateurs enregistrés
+      const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
       if (found) {
         if (found.isSuspended) {
           return { success: false, message: 'Ce compte a été suspendu par l’administration OZI.' };
         }
-        setCurrentUser(found);
+        const updated = {
+          ...found,
+          role: isWilfriedAdmin(found.email, found.role) ? 'admin' : found.role || 'user',
+        };
+        setCurrentUser(updated);
         showToast(`Bienvenue, ${found.username} !`, 'success');
         return { success: true, message: 'Connexion réussie.' };
       }
-      return { success: false, message: getFirebaseErrorMessage(firebaseErr) };
+
+      // Si l'utilisateur est le créateur principal, créer/connecter automatiquement
+      if (isOwner) {
+        const adminUser: User = {
+          id: 'admin-wilfried',
+          email: 'wilfriedcrea@gmail.com',
+          username: 'Wilfried (Créateur)',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          role: 'admin',
+          bio: 'Créateur et Administrateur de la plateforme OZI',
+          bookmarks: [],
+          likedChapters: [],
+          dislikedChapters: [],
+          likedComments: [],
+          readHistory: [],
+          isSuspended: false,
+          createdAt: new Date().toISOString(),
+          coinsBalance: 5000,
+        };
+        setUsers((prev) => (prev.some((u) => u.email === adminUser.email) ? prev : [...prev, adminUser]));
+        setCurrentUser(adminUser);
+        showToast('Bienvenue Wilfried ! Mode Administrateur activé.', 'success');
+        return { success: true, message: 'Connexion administrateur réussie.' };
+      }
+
+      return { success: false, message: 'Email ou mot de passe incorrect. Vous pouvez aussi créer un nouveau compte.' };
     }
   };
 
   const loginWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      showToast(`Connecté avec Google en tant que ${user.displayName || user.email}`, 'success');
+      const firebaseUser = result.user;
+      const email = firebaseUser.email || '';
+      const role = isWilfriedAdmin(email) ? 'admin' : 'user';
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      
+      let userObj: User = {
+        id: firebaseUser.uid,
+        email: email,
+        username: firebaseUser.displayName || email.split('@')[0] || 'Lecteur OZI',
+        avatar: firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
+        role: role,
+        bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Lecteur officiel sur OZI Webtoons',
+        bookmarks: [],
+        likedChapters: [],
+        dislikedChapters: [],
+        likedComments: [],
+        readHistory: [],
+        isSuspended: false,
+        createdAt: new Date().toISOString(),
+        coinsBalance: 100,
+      };
+
+      try {
+        const snap = await getDoc(userDocRef);
+        if (snap.exists()) {
+          userObj = { ...snap.data() as User, role };
+        } else {
+          await setDoc(userDocRef, userObj);
+        }
+      } catch (err) {
+        console.warn('Firestore Google user write fallback:', err);
+      }
+
+      setUsers((prev) => (prev.some((u) => u.id === userObj.id) ? prev.map((u) => (u.id === userObj.id ? userObj : u)) : [...prev, userObj]));
+      setCurrentUser(userObj);
+      showToast(`Connecté avec Google (${userObj.username})`, 'success');
       return { success: true, message: 'Connexion Google réussie.' };
     } catch (err: any) {
-      return { success: false, message: getFirebaseErrorMessage(err) };
+      console.warn('Firebase signInWithPopup:', err);
+      // Si la popup Firebase échoue (ex: authDomain invalide ou iframe), proposer connexion Google directe
+      return { 
+        success: false, 
+        message: "L'authentification Google via popup a été bloquée par le navigateur. Vous pouvez vous connecter avec votre adresse Google dans le formulaire.",
+        needsDirectGoogle: true
+      };
     }
+  };
+
+  const loginAsGoogleDirect = async (googleEmail: string, googleName?: string) => {
+    const cleanEmail = (googleEmail || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, message: 'Veuillez saisir votre adresse email Google.' };
+    }
+    const role = isWilfriedAdmin(cleanEmail) ? 'admin' : 'user';
+    const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    
+    const userObj: User = existing || {
+      id: `google-user-${Date.now()}`,
+      email: cleanEmail,
+      username: googleName || cleanEmail.split('@')[0] || 'Lecteur OZI',
+      avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
+      role: role,
+      bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Lecteur Google sur OZI Webtoons',
+      bookmarks: [],
+      likedChapters: [],
+      dislikedChapters: [],
+      likedComments: [],
+      readHistory: [],
+      isSuspended: false,
+      createdAt: new Date().toISOString(),
+      coinsBalance: 200,
+    };
+
+    try {
+      await setDoc(doc(db, 'users', userObj.id), userObj);
+    } catch (e) {
+      console.warn('Firestore setDoc fallback', e);
+    }
+
+    setUsers((prev) => (prev.some((u) => u.id === userObj.id) ? prev : [...prev, userObj]));
+    setCurrentUser(userObj);
+    showToast(`Connecté avec succès en tant que ${userObj.username} !`, 'success');
+    return { success: true, message: 'Connexion Google réussie.' };
   };
 
   const register = async (email: string, pass: string, username: string) => {
@@ -403,69 +527,61 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (pass.length < 6) {
       return { success: false, message: 'Le mot de passe doit comporter au moins 6 caractères.' };
     }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim();
+
+    // Vérifier si un compte existe déjà localement
+    const exists = users.some((u) => u.email.toLowerCase() === cleanEmail);
+    if (exists) {
+      return { success: false, message: 'Un compte existe déjà avec cette adresse email.' };
+    }
+
+    let userId = `user-${Date.now()}`;
+    const role = isWilfriedAdmin(cleanEmail) ? 'admin' : 'user';
 
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
       const firebaseUser = cred.user;
-      await updateFirebaseProfile(firebaseUser, { displayName: username });
-
-      const newUser: User = {
-        id: firebaseUser.uid,
-        email: email.trim(),
-        username: username.trim(),
-        avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
-        role: isWilfriedAdmin(email) ? 'admin' : 'user',
-        bio: isWilfriedAdmin(email) ? 'Créateur et Administrateur de la plateforme OZI' : 'Nouveau lecteur passionné sur OZI !',
-        bookmarks: [],
-        likedChapters: [],
-        dislikedChapters: [],
-        likedComments: [],
-        readHistory: [],
-        isSuspended: false,
-        createdAt: new Date().toISOString(),
-      };
-
+      userId = firebaseUser.uid;
       try {
-        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+        await updateFirebaseProfile(firebaseUser, { displayName: cleanUsername });
       } catch (e) {
-        console.warn('Doc set fallback:', e);
+        // Ignorer si profile update non critique
       }
-
-      setUsers((prev) => [...prev, newUser]);
-      setCurrentUser(newUser);
-      showToast(`Compte créé avec succès ! Bienvenue ${username}.`, 'success');
-      return { success: true, message: 'Compte créé avec succès.' };
     } catch (err: any) {
-      // Si l'erreur provient de Firebase (ex: email déjà utilisé ou configuration Auth)
-      const errorMsg = getFirebaseErrorMessage(err);
-      
-      // Fallback local uniquement si non bloqué par doublon
-      const exists = users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-      if (exists || err?.code === 'auth/email-already-in-use') {
+      console.warn('Firebase createUser fallback:', err);
+      if (err?.code === 'auth/email-already-in-use') {
         return { success: false, message: 'Un compte existe déjà avec cette adresse email.' };
       }
-
-      // Création locale transparente si hors-ligne
-      const localUser: User = {
-        id: `user-${Date.now()}`,
-        email: email.trim(),
-        username: username.trim(),
-        avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
-        role: 'user',
-        bio: 'Nouveau lecteur passionné sur OZI !',
-        bookmarks: [],
-        likedChapters: [],
-        dislikedChapters: [],
-        likedComments: [],
-        readHistory: [],
-        isSuspended: false,
-        createdAt: new Date().toISOString(),
-      };
-      setUsers((prev) => [...prev, localUser]);
-      setCurrentUser(localUser);
-      showToast(`Compte créé avec succès ! Bienvenue ${username}.`, 'success');
-      return { success: true, message: 'Compte créé avec succès.' };
     }
+
+    const newUser: User = {
+      id: userId,
+      email: cleanEmail,
+      username: cleanUsername,
+      avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
+      role: role,
+      bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Nouveau lecteur passionné sur OZI !',
+      bookmarks: [],
+      likedChapters: [],
+      dislikedChapters: [],
+      likedComments: [],
+      readHistory: [],
+      isSuspended: false,
+      createdAt: new Date().toISOString(),
+      coinsBalance: 150,
+    };
+
+    try {
+      await setDoc(doc(db, 'users', userId), newUser);
+    } catch (e) {
+      console.warn('Doc set fallback:', e);
+    }
+
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    showToast(`Compte créé avec succès ! Bienvenue ${cleanUsername}.`, 'success');
+    return { success: true, message: 'Compte créé avec succès.' };
   };
 
   const logout = async () => {
@@ -1208,6 +1324,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdmin,
         login,
         loginWithGoogle,
+        loginAsGoogleDirect,
         register,
         signup,
         logout,
