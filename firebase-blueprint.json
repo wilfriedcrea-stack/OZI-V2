@@ -98,12 +98,66 @@
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "userAvatar": { "type": "string" },
-        "content": { "type": "string" },
+        "text": { "type": "string" },
         "likes": { "type": "number" },
+        "dislikes": { "type": "number" },
         "isSpoiler": { "type": "boolean" },
+        "isReported": { "type": "boolean" },
         "createdAt": { "type": "string" }
       },
-      "required": ["id", "chapterId", "userId", "userName", "content", "createdAt"]
+      "required": ["id", "chapterId", "userId", "userName", "text", "createdAt"]
+    },
+    "games": {
+      "title": "Arcade Games",
+      "description": "Interactive mini-games and quizzes for the OZI platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "description": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "badge": { "type": "string" },
+        "category": { "type": "string" },
+        "playsCount": { "type": "number" },
+        "isPlayable": { "type": "boolean" },
+        "createdDate": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "playsCount", "isPlayable"]
+    },
+    "articles": {
+      "title": "Carnet Articles",
+      "description": "Editorial articles, news, creator interviews, and culture updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "category": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "authorRole": { "type": "string" },
+        "publishedAt": { "type": "string" },
+        "readTime": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "tags": { "type": "array" },
+        "featured": { "type": "boolean" }
+      },
+      "required": ["id", "title", "category", "content", "publishedAt"]
+    },
+    "subscribers": {
+      "title": "Newsletter Subscribers",
+      "description": "Opt-in subscriber emails for releases and news",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "subscribedAt": { "type": "string" },
+        "status": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "required": ["id", "email", "subscribedAt", "status"]
     }
   }
 }

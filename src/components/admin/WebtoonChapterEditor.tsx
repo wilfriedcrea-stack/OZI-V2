@@ -90,9 +90,14 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
     setUploadProgress({ current: 0, total: files.length });
 
     try {
-      const processedResults = await processBatchImages(files, (curr, tot) => {
-        setUploadProgress({ current: curr, total: tot });
-      });
+      const processedResults = await processBatchImages(
+        files,
+        currentWork?.id || workId,
+        chapterNumber,
+        (curr, tot) => {
+          setUploadProgress({ current: curr, total: tot });
+        }
+      );
 
       const newSlices: ChapterPage[] = processedResults.map((item, idx) => ({
         id: `slice-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 5)}`,
@@ -527,7 +532,7 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
                   <span>Glisser-déposer ou Parcourir vos fichiers (01.jpg, 02.jpg...)</span>
                 </button>
                 <p className="text-[10px] text-slate-400 mt-2">
-                  Glissez tous vos fichiers découpés d'un coup. Les images sont compressées et triées automatiquement par ordre numérique.
+                  Glissez tous vos fichiers d'un coup. Les images sont compressées en WebP haute performance, hébergées sur le Cloud Storage CDN et ordonnées automatiquement.
                 </p>
               </div>
             )}

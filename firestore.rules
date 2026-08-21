@@ -1,38 +1,86 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Profils utilisateurs
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if isOwner(userId) || !isSignedIn();
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'wilfriedcrea@gmail.com' ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'wilfriedcrea@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
-    // Catalogue des œuvres
+    // 1. Catalogue des Œuvres (Mangas, Webtoons, BD)
     match /works/{workId} {
       allow read: if true;
-      allow write: if isSignedIn() || true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['views', 'likes', 'rating', 'totalChapters', 'updatedAt'])
+      );
     }
 
-    // Chapitres
+    // 2. Chapitres & Épisodes
     match /chapters/{chapterId} {
       allow read: if true;
-      allow write: if isSignedIn() || true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['viewsCount', 'likesCount', 'dislikesCount', 'pages'])
+      );
     }
 
-    // Commentaires
+    // 3. Profils Utilisateurs & Soldes de Pièces
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow update: if (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) || isAdmin())) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // 4. Commentaires & Réponses
     match /comments/{commentId} {
       allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if (isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['likes', 'dislikes', 'replies', 'isReported'])
+      )) || isAdmin();
+      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+    }
+
+    // 5. Jeux & Arcade
+    match /games/{gameId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playsCount', 'isPlayable']);
+    }
+
+    // 6. Articles & Carnet Culturel
+    match /articles/{articleId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 7. Inscriptions Newsletter
+    match /subscribers/{subscriberId} {
+      allow read: if isAdmin();
       allow create: if true;
-      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.userId || request.auth.token.role == 'admin');
+      allow update, delete: if isAdmin();
+    }
+
+    // 8. Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

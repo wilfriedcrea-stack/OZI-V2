@@ -12,6 +12,7 @@ export const useCapacitorInit = (onBackAction?: () => boolean) => {
     const initNativeFeatures = async () => {
       try {
         await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setOverlaysWebView({ overlay: false });
         await StatusBar.setBackgroundColor({ color: '#07080c' });
       } catch (err) {
         console.warn('StatusBar not available', err);

@@ -1,9 +1,9 @@
+import { ref, uploadBytesResumable, getDownloadURL, uploadString } from 'firebase/storage';
+import { storage } from './firebase';
+
 /**
- * Helper d'upload & conversion d'images locales pour le lecteur et l'admin OZI.
- * Permet :
- * 1. La conversion en Base64 compressée / Blob URL pérenne
- * 2. L'upload direct vers un bucket / stockage ou stockage IndexedDB / LocalStorage optimisé
- * 3. Le support drag & drop et multi-fichiers pour les planches de webtoon.
+ * Helper d'upload vers Firebase Storage & Google Cloud Storage
+ * avec compression WebP client, fallback Base64 / Blob et progression temps-réel.
  */
 
 export interface UploadedImageResult {
@@ -11,6 +11,7 @@ export interface UploadedImageResult {
   name: string;
   size: number;
   type: string;
+  storagePath?: string;
 }
 
 /**
@@ -30,15 +31,14 @@ export const fileToDataUrl = (file: File): Promise<string> => {
 };
 
 /**
- * Redimensionne et compresse une image côté client pour éviter la surcharge mémoire
- * Idéal pour les couvertures d'œuvres, bannières et planches de webtoons
+ * Redimensionne et compresse une image côté client (format WebP haute performance)
  */
 export const compressImageFile = (
   file: File,
   maxWidth: number = 1200,
   maxHeight: number = 2400,
   quality: number = 0.85
-): Promise<string> => {
+): Promise<{ dataUrl: string; blob: Blob }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -63,14 +63,27 @@ export const compressImageFile = (
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(event.target?.result as string);
+          const rawDataUrl = event.target?.result as string;
+          resolve({ dataUrl: rawDataUrl, blob: file });
           return;
         }
 
         ctx.drawImage(img, 0, 0, width, height);
+
         // Exporter en WebP si supporté ou JPEG
-        const compressedDataUrl = canvas.toDataURL('image/webp', quality) || canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedDataUrl);
+        const compressedDataUrl =
+          canvas.toDataURL('image/webp', quality) || canvas.toDataURL('image/jpeg', quality);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve({
+              dataUrl: compressedDataUrl,
+              blob: blob || file,
+            });
+          },
+          'image/webp',
+          quality
+        );
       };
       img.onerror = (error) => reject(error);
     };
@@ -79,10 +92,100 @@ export const compressImageFile = (
 };
 
 /**
- * Traite une liste de fichiers d'images de planches et les retourne dans l'ordre naturel
+ * Upload d'une image vers Firebase Storage avec fallback instantané
+ * @param file Le fichier image
+ * @param folder Le dossier cible (ex: 'covers', 'banners', 'webtoons/work-1/ch-1')
+ * @param onProgress Callback de progression (0 à 100%)
+ */
+export const uploadImageToStorage = async (
+  file: File,
+  folder: string = 'uploads',
+  onProgress?: (progress: number) => void
+): Promise<UploadedImageResult> => {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const uniqueName = `${Date.now()}_${cleanName}`;
+  const storagePath = `${folder}/${uniqueName}`;
+
+  try {
+    // 1. Optimisation préalable
+    const { dataUrl, blob } = await compressImageFile(file, 1400, 3200, 0.88);
+
+    // 2. Tentative d'upload vers Firebase Storage
+    if (storage) {
+      const storageRef = ref(storage, storagePath);
+      const metadata = {
+        contentType: blob.type || 'image/webp',
+        customMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString(),
+        },
+      };
+
+      try {
+        const uploadTask = uploadBytesResumable(storageRef, blob, metadata);
+
+        const downloadUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              if (onProgress) onProgress(Math.round(progress));
+            },
+            (error) => {
+              console.warn('Firebase Storage upload warning, using fast direct URL:', error);
+              reject(error);
+            },
+            async () => {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            }
+          );
+        });
+
+        return {
+          url: downloadUrl,
+          name: file.name,
+          size: blob.size,
+          type: blob.type || 'image/webp',
+          storagePath,
+        };
+      } catch (storageError) {
+        console.warn('Fallback direct Cloud CDN URL:', storageError);
+        // Fallback transparent vers dataUrl optimisée
+        return {
+          url: dataUrl,
+          name: file.name,
+          size: blob.size,
+          type: 'image/webp',
+        };
+      }
+    }
+
+    return {
+      url: dataUrl,
+      name: file.name,
+      size: blob.size,
+      type: 'image/webp',
+    };
+  } catch (err) {
+    console.error('Upload image processing error:', err);
+    const fallback = await fileToDataUrl(file);
+    return {
+      url: fallback,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    };
+  }
+};
+
+/**
+ * Traite et uploade un lot complet de planches webtoon ordonnées
  */
 export const processBatchImages = async (
   files: FileList | File[],
+  workId?: string,
+  chapterNumber?: number,
   onProgress?: (current: number, total: number) => void
 ): Promise<UploadedImageResult[]> => {
   const fileArray = Array.from(files).sort((a, b) =>
@@ -90,22 +193,17 @@ export const processBatchImages = async (
   );
 
   const results: UploadedImageResult[] = [];
+  const folder = workId && chapterNumber ? `webtoons/${workId}/ch_${chapterNumber}` : 'webtoons/general';
 
   for (let i = 0; i < fileArray.length; i++) {
     const file = fileArray[i];
     if (!file.type.startsWith('image/')) continue;
 
     try {
-      // Pour les planches webtoon, on garde une excellente qualité
-      const optimizedUrl = await compressImageFile(file, 1200, 3200, 0.88);
-      results.push({
-        url: optimizedUrl,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      });
+      const uploadRes = await uploadImageToStorage(file, folder);
+      results.push(uploadRes);
     } catch (e) {
-      // Fallback direct FileReader
+      console.warn(`File ${file.name} fallback:`, e);
       const fallbackUrl = await fileToDataUrl(file);
       results.push({
         url: fallbackUrl,

@@ -338,7 +338,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
     return (
       <div className={`min-h-screen ${themeBgClass} flex flex-col justify-between font-['Plus_Jakarta_Sans',sans-serif]`}>
         {/* Top bar minimaliste */}
-        <header className="px-4 py-3 bg-[#0d0e15] border-b border-white/10 flex items-center justify-between">
+        <header className="px-4 pb-3 safe-header bg-[#0d0e15] border-b border-white/10 flex items-center justify-between">
           <button
             onClick={() => setActiveView('app_work_detail')}
             className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white"
@@ -422,7 +422,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
       {/* 1. TOP BAR DU LECTEUR (Sticky, Masquable au défilement) */}
       {/* ========================================================================= */}
       <header
-        className={`fixed top-0 left-0 right-0 z-40 bg-[#0d0e15]/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between transition-transform duration-300 shadow-xl ${
+        className={`fixed top-0 left-0 right-0 z-40 bg-[#0d0e15]/95 backdrop-blur-xl border-b border-white/10 px-4 pb-3 safe-header flex items-center justify-between transition-transform duration-300 shadow-xl ${
           showControls ? 'translate-y-0' : '-translate-y-full'
         }`}
       >

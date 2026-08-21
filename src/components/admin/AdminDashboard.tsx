@@ -29,7 +29,7 @@ import {
   Send,
 } from 'lucide-react';
 import { WebtoonChapterEditor } from './WebtoonChapterEditor';
-import { compressImageFile } from '../../lib/imageUploader';
+import { uploadImageToStorage } from '../../lib/imageUploader';
 import { notificationService } from '../../lib/notificationService';
 
 const GENRE_LIST: Genre[] = [
@@ -182,8 +182,8 @@ export const AdminDashboard: React.FC = () => {
     if (!file) return;
     setIsUploadingWorkCover(true);
     try {
-      const compressed = await compressImageFile(file, 800, 1200, 0.85);
-      setWorkForm((prev) => ({ ...prev, coverUrl: compressed }));
+      const res = await uploadImageToStorage(file, 'works/covers');
+      setWorkForm((prev) => ({ ...prev, coverUrl: res.url }));
       showToast('Image de couverture importée avec succès !', 'success');
     } catch (err) {
       showToast("Erreur lors de l'upload de la couverture", 'error');
@@ -197,8 +197,8 @@ export const AdminDashboard: React.FC = () => {
     if (!file) return;
     setIsUploadingWorkBanner(true);
     try {
-      const compressed = await compressImageFile(file, 1400, 700, 0.85);
-      setWorkForm((prev) => ({ ...prev, bannerUrl: compressed }));
+      const res = await uploadImageToStorage(file, 'works/banners');
+      setWorkForm((prev) => ({ ...prev, bannerUrl: res.url }));
       showToast('Bannière importée avec succès !', 'success');
     } catch (err) {
       showToast("Erreur lors de l'upload de la bannière", 'error');
@@ -212,8 +212,8 @@ export const AdminDashboard: React.FC = () => {
     if (!file) return;
     setIsUploadingArticleCover(true);
     try {
-      const compressed = await compressImageFile(file, 1200, 800, 0.85);
-      setArticleForm((prev) => ({ ...prev, coverUrl: compressed }));
+      const res = await uploadImageToStorage(file, 'articles/covers');
+      setArticleForm((prev) => ({ ...prev, coverUrl: res.url }));
       showToast("Image de couverture de l'article importée !", 'success');
     } catch (err) {
       showToast("Erreur lors de l'upload de l'image de l'article", 'error');

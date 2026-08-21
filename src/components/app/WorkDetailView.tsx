@@ -133,7 +133,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
   return (
     <div className="w-full bg-[#0d0e15] text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in duration-200 pb-20">
       {/* 1. TOP NAVBAR DÉTAIL */}
-      <header className="sticky top-0 z-40 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+      <header className="sticky top-0 z-40 bg-[#0d0e15]/95 backdrop-blur-md px-4 pb-3 safe-header flex items-center justify-between border-b border-white/5">
         <button
           onClick={() => setActiveView('app_catalogue')}
           className="text-slate-300 hover:text-white p-1 cursor-pointer"

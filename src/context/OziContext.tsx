@@ -37,6 +37,7 @@ import {
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -44,6 +45,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  increment,
 } from 'firebase/firestore';
 import { notificationService } from '../lib/notificationService';
 
@@ -276,6 +278,8 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               dislikedChapters: [],
               likedComments: [],
               readHistory: [],
+              coinsBalance: role === 'admin' ? 5000 : 100,
+              unlockedChapters: [],
               isSuspended: false,
               createdAt: new Date().toISOString(),
             };
@@ -291,7 +295,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // Synchronisation des œuvres et chapitres depuis Firestore si disponible
+  // Synchronisation en temps réel de toutes les entités depuis Firestore
   useEffect(() => {
     try {
       const worksCol = collection(db, 'works');
@@ -318,9 +322,48 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (err) => console.log('Chapters Firestore offline fallback')
       );
 
+      const gamesCol = collection(db, 'games');
+      const unsubscribeGames = onSnapshot(
+        gamesCol,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const cloudGames = snapshot.docs.map((d) => d.data() as Game);
+            setGames(cloudGames);
+          }
+        },
+        (err) => console.log('Games Firestore offline fallback')
+      );
+
+      const articlesCol = collection(db, 'articles');
+      const unsubscribeArticles = onSnapshot(
+        articlesCol,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const cloudArticles = snapshot.docs.map((d) => d.data() as Article);
+            setArticles(cloudArticles);
+          }
+        },
+        (err) => console.log('Articles Firestore offline fallback')
+      );
+
+      const commentsCol = collection(db, 'comments');
+      const unsubscribeComments = onSnapshot(
+        commentsCol,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const cloudComments = snapshot.docs.map((d) => d.data() as Comment);
+            setComments(cloudComments);
+          }
+        },
+        (err) => console.log('Comments Firestore offline fallback')
+      );
+
       return () => {
         unsubscribeWorks();
         unsubscribeChapters();
+        unsubscribeGames();
+        unsubscribeArticles();
+        unsubscribeComments();
       };
     } catch (e) {
       console.warn('Firestore subscription fallback:', e);
@@ -418,9 +461,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dislikedChapters: [],
           likedComments: [],
           readHistory: [],
+          coinsBalance: 5000,
+          unlockedChapters: [],
           isSuspended: false,
           createdAt: new Date().toISOString(),
-          coinsBalance: 5000,
         };
         setUsers((prev) => (prev.some((u) => u.email === adminUser.email) ? prev : [...prev, adminUser]));
         setCurrentUser(adminUser);
@@ -452,9 +496,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dislikedChapters: [],
         likedComments: [],
         readHistory: [],
+        coinsBalance: 100,
+        unlockedChapters: [],
         isSuspended: false,
         createdAt: new Date().toISOString(),
-        coinsBalance: 100,
       };
 
       try {
@@ -567,9 +612,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dislikedChapters: [],
       likedComments: [],
       readHistory: [],
+      coinsBalance: 150,
+      unlockedChapters: [],
       isSuspended: false,
       createdAt: new Date().toISOString(),
-      coinsBalance: 150,
     };
 
     try {
@@ -847,6 +893,9 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setChapters((prev) =>
         prev.map((c) => (c.id === chapterId ? { ...c, likesCount: Math.max(0, c.likesCount - 1) } : c))
       );
+      try {
+        updateDoc(doc(db, 'chapters', chapterId), { likesCount: increment(-1) });
+      } catch (e) {}
     } else {
       newLiked.push(chapterId);
       if (hasDisliked) {
@@ -863,11 +912,22 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             : c
         )
       );
+      try {
+        const updatePayload: any = { likesCount: increment(1) };
+        if (hasDisliked) updatePayload.dislikesCount = increment(-1);
+        updateDoc(doc(db, 'chapters', chapterId), updatePayload);
+      } catch (e) {}
     }
 
     const updatedUser = { ...currentUser, likedChapters: newLiked, dislikedChapters: newDisliked };
     setCurrentUser(updatedUser);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
+    try {
+      updateDoc(doc(db, 'users', currentUser.id), {
+        likedChapters: newLiked,
+        dislikedChapters: newDisliked,
+      });
+    } catch (e) {}
     return { success: true };
   };
 
@@ -887,6 +947,9 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setChapters((prev) =>
         prev.map((c) => (c.id === chapterId ? { ...c, dislikesCount: Math.max(0, c.dislikesCount - 1) } : c))
       );
+      try {
+        updateDoc(doc(db, 'chapters', chapterId), { dislikesCount: increment(-1) });
+      } catch (e) {}
     } else {
       newDisliked.push(chapterId);
       if (hasLiked) {
@@ -903,16 +966,27 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             : c
         )
       );
+      try {
+        const updatePayload: any = { dislikesCount: increment(1) };
+        if (hasLiked) updatePayload.likesCount = increment(-1);
+        updateDoc(doc(db, 'chapters', chapterId), updatePayload);
+      } catch (e) {}
     }
 
     const updatedUser = { ...currentUser, likedChapters: newLiked, dislikedChapters: newDisliked };
     setCurrentUser(updatedUser);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
+    try {
+      updateDoc(doc(db, 'users', currentUser.id), {
+        likedChapters: newLiked,
+        dislikedChapters: newDisliked,
+      });
+    } catch (e) {}
     return { success: true };
   };
 
-  // Comments CRUD
-  const addComment = (
+  // Comments CRUD avec persistance Firestore
+  const addComment = async (
     chapterId: string,
     workId: string,
     text: string,
@@ -943,11 +1017,16 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setComments((prev) => [newComment, ...prev]);
+    try {
+      await setDoc(doc(db, 'comments', newComment.id), newComment);
+    } catch (e) {
+      console.warn('Firestore addComment fallback:', e);
+    }
     showToast('Votre commentaire a été publié !', 'success');
     return { success: true };
   };
 
-  const addCommentReply = (commentId: string, text: string) => {
+  const addCommentReply = async (commentId: string, text: string) => {
     if (!currentUser) {
       showToast('Connectez-vous pour répondre.', 'info');
       return { success: false, message: 'Authentification requise' };
@@ -968,14 +1047,27 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dislikes: 0,
     };
 
+    let updatedReplies: CommentReply[] = [];
     setComments((prev) =>
-      prev.map((c) => (c.id === commentId ? { ...c, replies: [...c.replies, newReply] } : c))
+      prev.map((c) => {
+        if (c.id === commentId) {
+          updatedReplies = [...c.replies, newReply];
+          return { ...c, replies: updatedReplies };
+        }
+        return c;
+      })
     );
+
+    try {
+      if (updatedReplies.length > 0) {
+        await updateDoc(doc(db, 'comments', commentId), { replies: updatedReplies });
+      }
+    } catch (e) {}
     showToast('Réponse ajoutée.', 'success');
     return { success: true };
   };
 
-  const likeComment = (commentId: string) => {
+  const likeComment = async (commentId: string) => {
     if (!currentUser) {
       showToast('Connectez-vous pour aimer ce commentaire.', 'info');
       return;
@@ -994,6 +1086,11 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedUser = { ...currentUser, likedComments: newLiked };
     setCurrentUser(updatedUser);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
+
+    try {
+      updateDoc(doc(db, 'comments', commentId), { likes: increment(hasLiked ? -1 : 1) });
+      updateDoc(doc(db, 'users', currentUser.id), { likedComments: newLiked });
+    } catch (e) {}
   };
 
   const likeCommentReply = (commentId: string, replyId: string) => {
@@ -1010,28 +1107,47 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const reportComment = (commentId: string) => {
+  const reportComment = async (commentId: string) => {
     setComments((prev) =>
       prev.map((c) => (c.id === commentId ? { ...c, isReported: true } : c))
     );
+    try {
+      await updateDoc(doc(db, 'comments', commentId), { isReported: true });
+    } catch (e) {}
     showToast('Le commentaire a été signalé à l’équipe de modération.', 'info');
   };
 
-  const deleteComment = (commentId: string) => {
+  const deleteComment = async (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
+    try {
+      await deleteDoc(doc(db, 'comments', commentId));
+    } catch (e) {}
     showToast('Commentaire supprimé.', 'info');
   };
 
-  // Games CRUD
-  const toggleGameStatus = (gameId: string) => {
+  // Games CRUD avec persistance Firestore
+  const toggleGameStatus = async (gameId: string) => {
+    let newStatus = true;
     setGames((prev) =>
-      prev.map((g) => (g.id === gameId ? { ...g, isPlayable: !g.isPlayable } : g))
+      prev.map((g) => {
+        if (g.id === gameId) {
+          newStatus = !g.isPlayable;
+          return { ...g, isPlayable: newStatus };
+        }
+        return g;
+      })
     );
+    try {
+      await updateDoc(doc(db, 'games', gameId), { isPlayable: newStatus });
+    } catch (e) {}
     showToast('Disponibilité du jeu mise à jour.', 'info');
   };
 
-  const updateGame = (gameId: string, updates: Partial<Game>) => {
+  const updateGame = async (gameId: string, updates: Partial<Game>) => {
     setGames((prev) => prev.map((g) => (g.id === gameId ? { ...g, ...updates } : g)));
+    try {
+      await updateDoc(doc(db, 'games', gameId), updates);
+    } catch (e) {}
     showToast('Jeu mis à jour.', 'success');
   };
 
@@ -1039,9 +1155,12 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGames((prev) =>
       prev.map((g) => (g.id === gameId ? { ...g, playsCount: g.playsCount + 1 } : g))
     );
+    try {
+      updateDoc(doc(db, 'games', gameId), { playsCount: increment(1) });
+    } catch (e) {}
   };
 
-  const addGame = (gameData: Omit<Game, 'id' | 'playsCount' | 'createdDate'>) => {
+  const addGame = async (gameData: Omit<Game, 'id' | 'playsCount' | 'createdDate'>) => {
     const newGame: Game = {
       ...gameData,
       id: `game-${Date.now()}`,
@@ -1049,34 +1168,46 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdDate: new Date().toISOString().split('T')[0],
     };
     setGames((prev) => [newGame, ...prev]);
+    try {
+      await setDoc(doc(db, 'games', newGame.id), newGame);
+    } catch (e) {}
     showToast(`Le jeu "${newGame.title}" a été ajouté à l'arcade.`, 'success');
   };
 
-  // Articles CRUD
-  const addArticle = (articleData: Omit<Article, 'id' | 'publishedAt'>) => {
+  // Articles CRUD avec persistance Firestore
+  const addArticle = async (articleData: Omit<Article, 'id' | 'publishedAt'>) => {
     const newArticle: Article = {
       ...articleData,
       id: `art-${Date.now()}`,
       publishedAt: new Date().toISOString().split('T')[0],
     };
     setArticles((prev) => [newArticle, ...prev]);
+    try {
+      await setDoc(doc(db, 'articles', newArticle.id), newArticle);
+    } catch (e) {}
     showToast(`L'article "${newArticle.title}" a été publié.`, 'success');
   };
 
-  const updateArticle = (articleId: string, updates: Partial<Article>) => {
+  const updateArticle = async (articleId: string, updates: Partial<Article>) => {
     setArticles((prev) =>
       prev.map((a) => (a.id === articleId ? { ...a, ...updates } : a))
     );
+    try {
+      await updateDoc(doc(db, 'articles', articleId), updates);
+    } catch (e) {}
     showToast('Article mis à jour.', 'success');
   };
 
-  const deleteArticle = (articleId: string) => {
+  const deleteArticle = async (articleId: string) => {
     setArticles((prev) => prev.filter((a) => a.id !== articleId));
+    try {
+      await deleteDoc(doc(db, 'articles', articleId));
+    } catch (e) {}
     showToast('Article supprimé.', 'info');
   };
 
-  // Newsletter
-  const subscribeNewsletter = (email: string, source: string = 'footer') => {
+  // Newsletter avec persistance Firestore
+  const subscribeNewsletter = async (email: string, source: string = 'footer') => {
     if (!email || !email.includes('@')) {
       return { success: false, message: 'Veuillez saisir une adresse e-mail valide.' };
     }
@@ -1092,6 +1223,9 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       source,
     };
     setSubscribers((prev) => [...prev, newSub]);
+    try {
+      await setDoc(doc(db, 'subscribers', newSub.id), newSub);
+    } catch (e) {}
     showToast('Merci ! Vous recevrez nos prochaines exclusivités.', 'success');
     return { success: true, message: 'Inscription validée !' };
   };
@@ -1101,10 +1235,13 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Vous avez été désabonné de la newsletter.', 'info');
   };
 
-  // Navigation helpers
+  // Navigation helpers avec incrément atomique
   const openWorkDetail = (workId: string) => {
     setSelectedWorkId(workId);
     setWorks((prev) => prev.map((w) => (w.id === workId ? { ...w, views: w.views + 1 } : w)));
+    try {
+      updateDoc(doc(db, 'works', workId), { views: increment(1) });
+    } catch (e) {}
     setActiveView('app_work_detail');
   };
 
@@ -1113,6 +1250,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedChapterId(chapterId);
     setWorks((prev) => prev.map((w) => (w.id === workId ? { ...w, views: w.views + 1 } : w)));
     setChapters((prev) => prev.map((c) => (c.id === chapterId ? { ...c, viewsCount: c.viewsCount + 1 } : c)));
+    try {
+      updateDoc(doc(db, 'works', workId), { views: increment(1) });
+      updateDoc(doc(db, 'chapters', chapterId), { viewsCount: increment(1) });
+    } catch (e) {}
     setActiveView('app_reader');
   };
 

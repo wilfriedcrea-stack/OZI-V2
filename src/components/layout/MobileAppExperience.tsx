@@ -57,6 +57,8 @@ export const MobileAppExperience: React.FC = () => {
     setSearchQuery,
     showToast,
     openCoinShop,
+    selectedArticleId,
+    setSelectedArticleId,
   } = useOzi();
 
   // Navigation locale
@@ -172,7 +174,7 @@ export const MobileAppExperience: React.FC = () => {
   if (activeView === 'app_articles') {
     return (
       <div className="min-h-screen bg-[#07080c] text-white flex flex-col max-w-md mx-auto border-x border-white/5 pb-20">
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 pb-3 safe-header flex items-center justify-between border-b border-white/5">
           <button
             onClick={() => {
               if (selectedArticleId) {
@@ -223,7 +225,7 @@ export const MobileAppExperience: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-[#07080c] text-white flex flex-col max-w-md mx-auto border-x border-white/5 pb-20">
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 pb-3 safe-header flex items-center justify-between border-b border-white/5">
           <button
             onClick={() => setActiveView('app_catalogue')}
             className="text-slate-300 hover:text-white p-2 flex items-center gap-1.5 text-xs font-bold tap-active cursor-pointer"
@@ -245,7 +247,7 @@ export const MobileAppExperience: React.FC = () => {
   if (activeView === 'landing') {
     return (
       <div className="min-h-screen bg-[#07080c] text-white flex flex-col max-w-md mx-auto border-x border-white/5 pb-20">
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 pb-3 safe-header flex items-center justify-between border-b border-white/5">
           <button
             onClick={() => setActiveView('app_catalogue')}
             className="text-slate-300 hover:text-white p-2 flex items-center gap-1.5 text-xs font-bold tap-active cursor-pointer"
@@ -265,7 +267,7 @@ export const MobileAppExperience: React.FC = () => {
   if (activeView === 'legal') {
     return (
       <div className="min-h-screen bg-[#07080c] text-white flex flex-col max-w-md mx-auto border-x border-white/5 pb-20">
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-md px-4 pb-3 safe-header flex items-center justify-between border-b border-white/5">
           <button
             onClick={() => setActiveView('app_catalogue')}
             className="text-slate-300 hover:text-white p-2 flex items-center gap-1.5 text-xs font-bold tap-active cursor-pointer"
@@ -292,7 +294,7 @@ export const MobileAppExperience: React.FC = () => {
         {/* 1. TOP NAVBAR MOBILE TACTILE HAUTE QUALITÉ */}
         {/* Disposition symétrique : [Gauche: Coins] — [Centre: Logo OZI] — [Droite: Recherche + Boutique] */}
         {/* ========================================================================= */}
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/90 backdrop-blur-xl px-4 py-3 grid grid-cols-3 items-center border-b border-white/10 shadow-sm">
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-xl px-4 pb-3 safe-header grid grid-cols-3 items-center border-b border-white/10 shadow-sm">
           {/* ZONE GAUCHE : Solde des Pièces & Rechargement */}
           <div className="flex items-center justify-start">
             <button
@@ -608,7 +610,7 @@ export const MobileAppExperience: React.FC = () => {
                           alt={work.title}
                           className="w-full h-full object-cover"
                         />
-                        <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10">
+                        <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10 shadow-sm">
                           Ch. {work.totalChapters || 12}
                         </span>
 
