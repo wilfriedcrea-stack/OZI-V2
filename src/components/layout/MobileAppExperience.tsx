@@ -74,13 +74,18 @@ export const MobileAppExperience: React.FC = () => {
   const [playingGame, setPlayingGame] = useState<Game | null>(null);
 
   React.useEffect(() => {
-    // Initialiser les permissions système pour que les notifications s'affichent hors de l'application
-    notificationService.requestPermissions();
+    // Initialiser les notifications locales de manière asynchrone non-bloquante
+    const timer = setTimeout(() => {
+      notificationService.requestPermissions().catch(() => {});
+    }, 1500);
 
     const unsub = notificationService.subscribe((list) => {
       setUnreadNotifsCount(list.filter((n) => !n.read).length);
     });
-    return () => unsub();
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
   }, []);
 
   // Panier e-commerce (vide par défaut pour une interface épurée sans badge rouge parasite)

@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1500,
       launchAutoHide: true,
       backgroundColor: '#07080c',
       androidSplashResourceName: 'splash',
@@ -20,14 +20,6 @@ const config: CapacitorConfig = {
     StatusBar: {
       backgroundColor: '#07080c',
       style: 'DARK',
-    },
-    LocalNotifications: {
-      smallIcon: 'ic_stat_icon_config_sample',
-      iconColor: '#ff5a50',
-      sound: 'beep.wav',
-    },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
 };

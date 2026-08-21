@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface InAppNotification {
@@ -14,45 +13,47 @@ export interface InAppNotification {
 
 class NotificationService {
   private isNative: boolean = false;
-  private isPushSupported: boolean = false;
   private permissionGranted: boolean = false;
   private listeners: ((notifications: InAppNotification[]) => void)[] = [];
   private notificationsHistory: InAppNotification[] = [];
+  private channelsCreated: boolean = false;
 
   constructor() {
-    this.isNative = Capacitor.isNativePlatform();
-    this.isPushSupported = this.isNative;
-    this.loadLocalHistory();
-    this.initChannels();
+    try {
+      this.isNative = Capacitor.isNativePlatform();
+      this.loadLocalHistory();
+    } catch (e) {
+      console.warn('Erreur constructeur notificationService:', e);
+    }
   }
 
-  private async initChannels() {
+  public async ensureChannels() {
+    if (!this.isNative || this.channelsCreated) return;
     try {
-      if (this.isNative) {
-        // Création du canal de notification Android haute importance
-        await LocalNotifications.createChannel({
-          id: 'ozi_releases',
-          name: 'Nouveaux Chapitres & Sorties',
-          description: 'Alertes lors de la parution de nouveaux épisodes',
-          importance: 5,
-          visibility: 1,
-          vibration: true,
-          sound: 'beep.wav',
-          lights: true,
-          lightColor: '#ff5a50',
-        });
+      // Création du canal de notification Android
+      await LocalNotifications.createChannel({
+        id: 'ozi_releases',
+        name: 'Nouveaux Chapitres & Sorties',
+        description: 'Alertes lors de la parution de nouveaux épisodes',
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+        lights: true,
+        lightColor: '#ff5a50',
+      });
 
-        await LocalNotifications.createChannel({
-          id: 'ozi_activity',
-          name: 'Activité & Pièces',
-          description: 'Recharges de pièces et réponses aux commentaires',
-          importance: 4,
-          visibility: 1,
-          vibration: true,
-          lights: true,
-          lightColor: '#ff5a50',
-        });
-      }
+      await LocalNotifications.createChannel({
+        id: 'ozi_activity',
+        name: 'Activité & Pièces',
+        description: 'Recharges de pièces et réponses aux commentaires',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+        lights: true,
+        lightColor: '#ff5a50',
+      });
+
+      this.channelsCreated = true;
     } catch (e) {
       console.warn('Erreur création canaux notifications:', e);
     }
@@ -69,7 +70,7 @@ class NotificationService {
           {
             id: 'notif-welcome',
             title: 'Bienvenue sur OZI Webtoon ! 🎉',
-            body: 'découvre ton prochain webtoon préferé ! ',
+            body: 'Découvrez les meilleurs webtoons et mangas africains.',
             type: 'system',
             read: false,
             date: new Date().toISOString(),
@@ -134,26 +135,15 @@ class NotificationService {
   }
 
   /**
-   * Demande la permission pour les notifications (Push Android & Web Notification API)
+   * Demande la permission pour les notifications (Android Local Notifications & Web Notification API)
    */
   public async requestPermissions(): Promise<boolean> {
     try {
       if (this.isNative) {
-        // En environnement Android natif Capacitor
-        let permStatus = await PushNotifications.checkPermissions();
-        if (permStatus.receive === 'prompt') {
-          permStatus = await PushNotifications.requestPermissions();
-        }
-
-        if (permStatus.receive === 'granted') {
-          this.permissionGranted = true;
-          await this.initNativePush();
-          return true;
-        }
-
-        // Vérifier aussi les notifications locales
+        await this.ensureChannels();
         const localPerm = await LocalNotifications.requestPermissions();
-        return localPerm.display === 'granted';
+        this.permissionGranted = localPerm.display === 'granted';
+        return this.permissionGranted;
       } else {
         // En environnement Web (Browser)
         if ('Notification' in window) {
@@ -168,43 +158,15 @@ class NotificationService {
     return false;
   }
 
-  private async initNativePush() {
-    try {
-      await PushNotifications.register();
-
-      PushNotifications.addListener('registration', (token: Token) => {
-        console.log('Push Registration Token OZI:', token.value);
-        localStorage.setItem('ozi_fcm_token', token.value);
-      });
-
-      PushNotifications.addListener('registrationError', (error: any) => {
-        console.error('Erreur enregistrement Push:', JSON.stringify(error));
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-        this.addInAppNotification({
-          id: `push-${Date.now()}`,
-          title: notification.title || 'Nouveau message OZI',
-          body: notification.body || '',
-          type: 'system',
-          read: false,
-          date: new Date().toISOString(),
-          data: notification.data,
-        });
-      });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-        console.log('Action sur notification reçue:', action.notification);
-      });
-    } catch (err) {
-      console.warn('Initialisation push natif:', err);
-    }
-  }
-
   /**
-   * Déclenche une notification immédiate (sur l'appareil + dans le centre de notifications)
+   * Déclenche une notification immédiate (sur l'appareil en dehors de l'app + dans le centre de notifications)
    */
-  public async sendNotification(title: string, body: string, type: 'chapter' | 'system' | 'coin' | 'event' = 'system', data?: any) {
+  public async sendNotification(
+    title: string,
+    body: string,
+    type: 'chapter' | 'system' | 'coin' | 'event' = 'system',
+    data?: any
+  ) {
     const notif: InAppNotification = {
       id: `notif-${Date.now()}`,
       title,
@@ -221,17 +183,16 @@ class NotificationService {
     // 2. Notification système / device
     try {
       if (this.isNative) {
+        await this.ensureChannels();
         const channelId = type === 'chapter' ? 'ozi_releases' : 'ozi_activity';
         await LocalNotifications.schedule({
           notifications: [
             {
-              id: Math.floor(Math.random() * 100000) + 1,
+              id: Math.floor(Math.random() * 90000) + 1000,
               title,
               body,
-              schedule: { at: new Date(Date.now() + 200) },
+              schedule: { at: new Date(Date.now() + 300) },
               channelId,
-              smallIcon: 'ic_stat_icon_config_sample',
-              iconColor: '#ff5a50',
               extra: data,
             },
           ],
@@ -240,11 +201,10 @@ class NotificationService {
         new Notification(title, {
           body,
           icon: '/favicon.ico',
-          badge: '/favicon.ico',
         });
       }
     } catch (e) {
-      console.log('Notification système envoyée en mode in-app:', e);
+      console.warn('Notification système locale note:', e);
     }
   }
 
