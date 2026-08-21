@@ -1,0 +1,71 @@
+name: 🚀 Build & Release OZI Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  release:
+    types: [published, created]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Type de build'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: 📱 Compiler l'APK Android OZI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Récupérer le code source
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurer Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: 🟢 Configurer Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Installer les dépendances NPM
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: 🏗️ Compiler l'application Web (Vite)
+        run: |
+          npm run build
+
+      - name: 🔄 Synchroniser Capacitor Android
+        run: |
+          npx cap sync android
+
+      - name: 🔑 Rendre Gradlew exécutable
+        run: |
+          chmod +x ./android/gradlew
+
+      - name: ⚙️ Compiler l'APK Debug
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+          cd ..
+
+      - name: 📤 Exporter l'APK en Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ozi-webtoon-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
