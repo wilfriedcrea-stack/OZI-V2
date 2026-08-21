@@ -17,6 +17,10 @@ jobs:
       - name: 📥 Récupérer le code source
         uses: actions/checkout@v4
 
+      - name: 🧹 Nettoyer le wrapper corrompu
+        run: |
+          rm -rf android/gradle/wrapper
+
       - name: ☕ Configurer Java JDK 21
         uses: actions/setup-java@v4
         with:
@@ -27,6 +31,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.3'
+          validate-wrappers: false
 
       - name: 🟢 Configurer Node.js 22
         uses: actions/setup-node@v4
