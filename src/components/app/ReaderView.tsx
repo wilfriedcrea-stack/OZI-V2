@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { CommentsModal } from './CommentsModal';
 import { OziLogo } from '../common/OziLogo';
+import { formatDirectAudioUrl } from '../../lib/audioUrlHelper';
 
 interface ReaderViewProps {
   onOpenComments?: () => void;
@@ -147,7 +148,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
   const customPanels = DEFAULT_COMIC_PANELS[currentChapterId];
 
   // Gestion du lecteur Audio en boucle pour le chapitre
-  const currentAudioUrl = currentChapter?.audioUrl;
+  const rawAudioUrl = currentChapter?.audioUrl;
+  const currentAudioUrl = formatDirectAudioUrl(rawAudioUrl);
   const currentAudioTitle = currentChapter?.audioTitle || 'Bande-son du chapitre';
   const currentAudioArtist = currentChapter?.audioArtist || 'OZI OST';
 
@@ -434,7 +436,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
           </button>
 
           <div className="min-w-0">
-            <h1 className="text-xs font-black text-white truncate">
+            <h1 className="text-xs sm:text-sm font-black text-white truncate font-almodobar tracking-wide">
               {currentWork?.title || 'Webtoon Original'}
             </h1>
             <p className="text-[10px] text-[#ff5a50] font-bold truncate flex items-center gap-1">

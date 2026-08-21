@@ -1,16 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#FF5045"/>
-  <g transform="translate(48, 56) scale(0.82)">
-    <!-- O: Double circle target -->
-    <circle cx="160" cy="250" r="110" fill="none" stroke="#FFFFFF" stroke-width="26"/>
-    <circle cx="160" cy="250" r="54" fill="none" stroke="#FFFFFF" stroke-width="20"/>
-    <circle cx="160" cy="250" r="18" fill="#FFFFFF"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F111A"/>
+      <stop offset="100%" stop-color="#07080C"/>
+    </linearGradient>
+    <linearGradient id="oziCoralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B5B"/>
+      <stop offset="100%" stop-color="#FF3829"/>
+    </linearGradient>
+    <linearGradient id="oziFlame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8C73"/>
+      <stop offset="100%" stop-color="#FF4331"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Outer glowing accent ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#oziCoralGrad)" stroke-width="6" opacity="0.4"/>
+
+  <!-- Main emblem badge -->
+  <g transform="translate(106, 76)">
+    <!-- Coral badge -->
+    <rect width="300" height="300" rx="72" fill="url(#oziCoralGrad)"/>
     
-    <!-- Z: Stylized lightning Z -->
-    <path d="M260 180 L320 180 L270 260 L330 260" fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Target circles -->
+    <circle cx="150" cy="150" r="105" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="150" cy="150" r="58" fill="none" stroke="#FFFFFF" stroke-width="16"/>
+    <circle cx="150" cy="150" r="22" fill="#FFFFFF"/>
     
-    <!-- I: Exclamation-style I -->
-    <circle cx="360" cy="190" r="14" fill="#FFFFFF"/>
-    <path d="M360 224 L360 260" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round"/>
+    <!-- Lightning Flash Accent -->
+    <path d="M220 70 L254 116 L230 122 L248 160 L204 132 L228 126 Z" fill="#FFE27A"/>
+  </g>
+
+  <!-- Text "OZI" below -->
+  <g transform="translate(256, 450)" text-anchor="middle">
+    <text font-family="'Outfit', 'Montserrat', 'Arial Black', sans-serif" font-weight="900" font-size="56" fill="#FFFFFF" letter-spacing="12">OZI</text>
   </g>
 </svg>

@@ -8,18 +8,32 @@ import {
   Send,
   Star,
   Flame,
+  BadgeCheck,
+  Shield,
+  Sparkles,
 } from 'lucide-react';
+import { notificationService } from '../../lib/notificationService';
 
 interface CommentsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  chapterId?: string;
+  workId?: string;
 }
 
-export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser, addToast } = useOzi();
+export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose, chapterId, workId }) => {
+  const { currentUser, showToast, isAdmin, works } = useOzi();
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
   const [commentInput, setCommentInput] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState(() => {
+    return localStorage.getItem('ozi_guest_commenter_name') || 'Lecteur_Anonyme';
+  });
+  const [isEditingGuestName, setIsEditingGuestName] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
+
+  // Recherche de l'auteur de l'œuvre courante pour lui assigner un badge certifié
+  const currentWork = works.find((w) => w.id === workId);
+  const workAuthor = currentWork?.author;
 
   // Données conformes à la maquette "OZI - Commentaires (Refonte UX).png"
   const [comments, setComments] = useState([
@@ -69,24 +83,30 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
+  const currentAuthorName = currentUser?.username || guestName;
+  const currentAvatarUrl =
+    currentUser?.avatar ||
+    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
 
     if (replyingTo) {
+      const replyContent = commentInput.trim();
       setComments((prev) =>
         prev.map((c) =>
-          c.id === replyingTo
+          c.id === replyingTo.id
             ? {
                 ...c,
                 replies: [
                   ...c.replies,
                   {
                     id: `r-${Date.now()}`,
-                    author: currentUser?.username || 'Moi',
-                    avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+                    author: currentAuthorName,
+                    avatar: currentAvatarUrl,
                     time: "À l'instant",
-                    text: commentInput,
+                    text: replyContent,
                     likes: 0,
                   },
                 ],
@@ -94,24 +114,34 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
             : c
         )
       );
+
+      // Notification Push & In-App envoyée à l'auteur du commentaire
+      notificationService.notifyCommentReply(
+        currentAuthorName,
+        replyContent,
+        workId,
+        chapterId
+      );
+
+      showToast(`Réponse envoyée à @${replyingTo.author} !`, 'success');
       setReplyingTo(null);
     } else {
       const newComment = {
         id: `c-${Date.now()}`,
-        author: currentUser?.username || 'Lecteur_OZI',
-        avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        author: currentAuthorName,
+        avatar: currentAvatarUrl,
         time: "À l'instant",
         isTop: false,
-        text: commentInput,
+        text: commentInput.trim(),
         likes: 0,
         dislikes: 0,
         replies: [],
       };
       setComments([newComment, ...comments]);
+      showToast('Commentaire publié avec succès !', 'success');
     }
 
     setCommentInput('');
-    addToast('Commentaire publié !', 'success');
   };
 
   return (
@@ -193,7 +223,19 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white truncate">{comment.author}</h4>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-white truncate">{comment.author}</h4>
+                    {workAuthor && comment.author.toLowerCase() === workAuthor.toLowerCase() && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] font-black flex items-center gap-0.5">
+                        <Sparkles className="w-2.5 h-2.5 text-amber-400" /> Auteur
+                      </span>
+                    )}
+                    {comment.author === 'wilfriedcrea@gmail.com' && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-[9px] font-black flex items-center gap-0.5">
+                        <Shield className="w-2.5 h-2.5 text-purple-400" /> Créateur
+                      </span>
+                    )}
+                  </div>
                   {!comment.isTop && (
                     <button className="text-slate-400 hover:text-white p-0.5">
                       <MoreVertical className="w-3.5 h-3.5" />
@@ -241,7 +283,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
 
               <button
                 onClick={() => {
-                  setReplyingTo(comment.id);
+                  setReplyingTo({ id: comment.id, author: comment.author });
                   setCommentInput(`@${comment.author} `);
                 }}
                 className="ml-auto text-xs font-semibold text-slate-300 hover:text-white cursor-pointer"
@@ -266,7 +308,19 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
                       />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h5 className="text-[11px] font-bold text-white">{reply.author}</h5>
+                          <div className="flex items-center gap-1.5">
+                            <h5 className="text-[11px] font-bold text-white">{reply.author}</h5>
+                            {workAuthor && reply.author.toLowerCase() === workAuthor.toLowerCase() && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-black flex items-center gap-0.5">
+                                <Sparkles className="w-2 h-2 text-amber-400" /> Auteur
+                              </span>
+                            )}
+                            {reply.author === 'wilfriedcrea@gmail.com' && (
+                              <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[8px] font-black flex items-center gap-0.5">
+                                <Shield className="w-2 h-2 text-purple-400" /> Créateur
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[9px] text-slate-400">{reply.time}</span>
                         </div>
                         <p className="text-[11px] text-slate-200 mt-0.5 leading-snug">
@@ -279,7 +333,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
                           </button>
                           <button
                             onClick={() => {
-                              setReplyingTo(comment.id);
+                              setReplyingTo({ id: comment.id, author: reply.author });
                               setCommentInput(`@${reply.author} `);
                             }}
                             className="text-[10px] font-semibold text-slate-300 hover:text-white cursor-pointer"
@@ -299,33 +353,72 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ isOpen, onClose })
 
       {/* 4. BARRE DE SAISIE FIXÉE AU BAS */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-[#12131f]/95 backdrop-blur-md px-4 py-3 border-t border-white/10 max-w-md mx-auto">
+        {/* Indication / modification du pseudo invité si non connecté */}
+        {!currentUser && (
+          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5 px-1">
+            <div className="flex items-center gap-1">
+              <span>Commenter en tant que :</span>
+              {isEditingGuestName ? (
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => {
+                    setGuestName(e.target.value);
+                    localStorage.setItem('ozi_guest_commenter_name', e.target.value);
+                  }}
+                  onBlur={() => setIsEditingGuestName(false)}
+                  onKeyDown={(e) => e.key === 'Enter' && setIsEditingGuestName(false)}
+                  autoFocus
+                  className="bg-[#1c1e2e] border border-[#ff5a50] text-[#ff5a50] text-[10px] font-bold px-1.5 py-0.5 rounded outline-none w-28"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingGuestName(true)}
+                  className="text-amber-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+                  title="Cliquer pour changer de pseudo"
+                >
+                  <span>{guestName}</span>
+                  <span className="text-[9px] text-slate-500">(modifier)</span>
+                </button>
+              )}
+            </div>
+            <span className="text-[9px] text-emerald-400 font-medium">Sans inscription ✓</span>
+          </div>
+        )}
+
         {replyingTo && (
-          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5 px-2">
-            <span>En réponse à un commentaire...</span>
+          <div className="flex items-center justify-between text-[11px] text-slate-300 mb-2 px-2.5 py-1 bg-[#1e2032] border border-[#ff5a50]/30 rounded-xl">
+            <span className="flex items-center gap-1">
+              <span className="text-slate-400">Réponse à</span>
+              <strong className="text-[#ff5a50]">@{replyingTo.author}</strong>
+            </span>
             <button
+              type="button"
               onClick={() => {
                 setReplyingTo(null);
                 setCommentInput('');
               }}
-              className="text-[#ff5a50] font-bold"
+              className="text-slate-400 hover:text-white text-[10px] font-bold cursor-pointer"
             >
-              Annuler
+              ✕ Annuler
             </button>
           </div>
         )}
         <form onSubmit={handleSendComment} className="flex items-center gap-2.5">
           <img
-            src={
-              currentUser?.avatar ||
-              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
-            }
+            src={currentAvatarUrl}
             alt="Mon Profil"
             className="w-8 h-8 rounded-full object-cover border border-[#ff5a50]"
           />
           <div className="flex-1 relative flex items-center">
             <input
               type="text"
-              placeholder="Ajouter un commentaire..."
+              placeholder={
+                currentUser
+                  ? 'Ajouter un commentaire...'
+                  : `Commenter sous le nom ${guestName}...`
+              }
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
               className="w-full bg-[#1c1e2e] border border-white/10 text-white text-xs pl-4 pr-10 py-2.5 rounded-full focus:outline-none focus:border-[#ff5a50]"

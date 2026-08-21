@@ -45,6 +45,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
+import { notificationService } from '../lib/notificationService';
 
 interface OziContextType {
   // Navigation & View
@@ -666,6 +667,17 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch (e) {}
 
+    // Déclencher une notification Push & In-App pour le nouveau chapitre
+    const currentWork = works.find((w) => w.id === chapterData.workId);
+    if (currentWork) {
+      notificationService.notifyNewChapter(
+        currentWork.title,
+        chapterData.title || `Chapitre ${chapterData.chapterNumber}`,
+        currentWork.id,
+        newId
+      );
+    }
+
     showToast(`Chapitre ${chapterData.chapterNumber} ajouté avec succès.`, 'success');
     return newId;
   };
@@ -1073,6 +1085,9 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Firestore coins recharge sync fallback:', e);
       }
     }
+
+    // Alerte notification in-app et push
+    notificationService.notifyCoinRecharge(totalCoinsAdded);
 
     showToast(`+${totalCoinsAdded} Coins crédités avec succès sur votre compte ! 🎉`, 'success');
     return { success: true, message: 'Paiement validé avec succès !', transaction: newTx };

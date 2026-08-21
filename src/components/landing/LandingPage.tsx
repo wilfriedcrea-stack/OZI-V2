@@ -233,7 +233,7 @@ export const LandingPage: React.FC = () => {
       <section className="py-16 bg-slate-950/60 border-y border-slate-800/80">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-['Outfit',sans-serif]">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-almodobar tracking-wide">
               Pourquoi choisir la plateforme OZI ?
             </h2>
             <p className="text-xs sm:text-sm text-slate-400">
@@ -287,7 +287,7 @@ export const LandingPage: React.FC = () => {
                 <Flame className="w-4 h-4" />
                 <span>Tendances du moment</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-white font-['Outfit',sans-serif]">
+            <h2 className="text-2xl font-extrabold text-white font-almodobar tracking-wide">
                 Les séries les plus lues sur OZI
               </h2>
             </div>
@@ -322,7 +322,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="p-3">
-                  <h3 className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors truncate">
+                  <h3 className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors truncate font-almodobar tracking-wide">
                     {work.title}
                   </h3>
                   <p className="text-[10px] text-slate-400 truncate">{work.genres.slice(0, 2).join(' • ')}</p>
@@ -345,7 +345,7 @@ export const LandingPage: React.FC = () => {
               <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest block mb-2">
                 Restez informés
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-['Outfit',sans-serif]">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-almodobar tracking-wide">
                 Inscrivez-vous à la Newsletter OZI
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">

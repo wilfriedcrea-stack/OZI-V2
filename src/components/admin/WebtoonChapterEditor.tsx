@@ -18,8 +18,11 @@ import {
   Volume2,
   Play,
   Pause,
+  Loader2,
 } from 'lucide-react';
 import { Chapter, ChapterPage } from '../../types';
+import { formatDirectAudioUrl } from '../../lib/audioUrlHelper';
+import { processBatchImages } from '../../lib/imageUploader';
 
 interface WebtoonChapterEditorProps {
   workId: string;
@@ -52,6 +55,10 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
   const [audioTitle, setAudioTitle] = useState<string>(chapterToEdit?.audioTitle || '');
   const [audioArtist, setAudioArtist] = useState<string>(chapterToEdit?.audioArtist || '');
 
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
+
   // Liste ordonnée des tranches d'images verticales (Image 1 -> 2000px, Image 2 -> 2000px...)
   const [slices, setSlices] = useState<ChapterPage[]>(
     chapterToEdit?.pages && chapterToEdit.pages.length > 0
@@ -75,26 +82,58 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
   const [urlsInput, setUrlsInput] = useState<string>('');
   const [previewSeamless, setPreviewSeamless] = useState<boolean>(false);
 
-  // Upload direct de fichiers locaux découpés (images multiples ordonnées)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  // Traitement optimisé des fichiers avec compression automatique et ordre naturel
+  const handleProcessFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
 
-    // Convertir les fichiers en URLs d'aperçu / base64 dans l'ordre naturel des noms de fichiers
-    const fileArray = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: files.length });
 
-    const newSlices: ChapterPage[] = fileArray.map((file, idx) => {
-      const blobUrl = URL.createObjectURL(file);
-      return {
+    try {
+      const processedResults = await processBatchImages(files, (curr, tot) => {
+        setUploadProgress({ current: curr, total: tot });
+      });
+
+      const newSlices: ChapterPage[] = processedResults.map((item, idx) => ({
         id: `slice-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 5)}`,
         pageNumber: slices.length + idx + 1,
-        imageUrl: blobUrl,
-        altText: file.name,
-      };
-    });
+        imageUrl: item.url,
+        altText: item.name || `Tranche ${slices.length + idx + 1}`,
+      }));
 
-    setSlices((prev) => [...prev, ...newSlices]);
-    showToast(`${newSlices.length} tranches d'images importées avec succès dans l'ordre !`, 'success');
+      setSlices((prev) => [...prev, ...newSlices]);
+      showToast(`${newSlices.length} tranche(s) d'images traitée(s) et intégrée(s) avec succès !`, 'success');
+    } catch (error) {
+      console.error("Erreur lors de l'upload des images:", error);
+      showToast("Erreur lors du traitement d'une image.", 'error');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleProcessFiles(e.target.files);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleProcessFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
   };
 
   // Ajout par lot d'URLs d'images découpées (CDN / Cloudinary / Supabase / Imgur)
@@ -148,17 +187,18 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
 
   const togglePreviewAudio = () => {
     if (!audioUrl) return;
+    const directUrl = formatDirectAudioUrl(audioUrl);
     if (!audioPreviewRef.current) {
-      audioPreviewRef.current = new Audio(audioUrl);
+      audioPreviewRef.current = new Audio(directUrl);
       audioPreviewRef.current.loop = true;
     }
     if (isPlayingPreview) {
       audioPreviewRef.current.pause();
       setIsPlayingPreview(false);
     } else {
-      audioPreviewRef.current.src = audioUrl;
+      audioPreviewRef.current.src = directUrl;
       audioPreviewRef.current.play().catch(() => {
-        showToast('Impossible de lire l’aperçu audio.', 'error');
+        showToast('Impossible de lire l’aperçu audio. Vérifiez que le lien Drive est bien partagé en public (Tous les utilisateurs disposant du lien).', 'error');
       });
       setIsPlayingPreview(true);
     }
@@ -175,6 +215,8 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
       audioPreviewRef.current.pause();
     }
 
+    const cleanedAudioUrl = audioUrl.trim() ? formatDirectAudioUrl(audioUrl) : undefined;
+
     const payload = {
       workId: currentWork?.id || workId,
       chapterNumber,
@@ -182,7 +224,7 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
       pages: slices,
       isLocked: !isFree,
       coinPrice: isFree ? 0 : coinPrice,
-      audioUrl: audioUrl.trim() || undefined,
+      audioUrl: cleanedAudioUrl,
       audioTitle: audioTitle.trim() || undefined,
       audioArtist: audioArtist.trim() || undefined,
       releaseDate: new Date().toISOString().slice(0, 10),
@@ -327,16 +369,30 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               <div className="sm:col-span-3">
-                <label className="block text-slate-300 font-bold mb-1">
-                  URL du fichier Audio (MP3, AAC, OGG, CDN...)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300 font-bold">
+                    Lien Audio / Google Drive / Dropbox / CDN
+                  </label>
+                  <span className="text-[10px] text-cyan-300 font-semibold">
+                    ✓ Liens Google Drive publics convertis automatiquement
+                  </span>
+                </div>
                 <input
                   type="url"
                   value={audioUrl}
-                  onChange={(e) => setAudioUrl(e.target.value)}
-                  placeholder="https://mon-serveur.com/ost-chapitre1.mp3"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAudioUrl(val);
+                    if (val.includes('drive.google.com')) {
+                      showToast('Lien Google Drive détecté : streaming direct configuré !', 'info');
+                    }
+                  }}
+                  placeholder="Collez ici votre lien Google Drive (ex: https://drive.google.com/file/d/.../view) ou MP3"
                   className="w-full bg-[#1b1e32] border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  💡 <strong className="text-slate-300">Astuce Drive :</strong> Faites un clic-droit sur votre MP3 dans Google Drive → <em>Partager</em> → sélectionnez <em>« Tous les utilisateurs disposant du lien »</em> puis copiez le lien.
+                </p>
               </div>
 
               <div className="sm:col-span-2">
@@ -413,7 +469,16 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
           </div>
 
           {/* ZONE 1 : UPLOAD MULTIPLE DE FICHIERS DÉCOUPÉS */}
-          <div className="p-4 bg-[#141624] border-2 border-dashed border-purple-500/30 hover:border-purple-500/60 rounded-2xl space-y-3 transition-colors text-center">
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`p-5 bg-[#141624] border-2 border-dashed rounded-2xl space-y-3 transition-all text-center ${
+              isDraggingOver
+                ? 'border-purple-400 bg-purple-950/30 scale-[1.01]'
+                : 'border-purple-500/30 hover:border-purple-500/60'
+            }`}
+          >
             <input
               type="file"
               ref={fileInputRef}
@@ -422,22 +487,50 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
               onChange={handleFileUpload}
               className="hidden"
             />
-            <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto">
-              <Upload className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto border border-purple-500/30 shadow-inner">
+              {isUploading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-purple-300" />
+              ) : (
+                <Upload className="w-6 h-6" />
+              )}
             </div>
-            <div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-xl shadow cursor-pointer tap-active inline-flex items-center gap-1.5"
-              >
-                <FileArchive className="w-4 h-4" />
-                <span>Sélectionner les images découpées (01.jpg, 02.jpg...)</span>
-              </button>
-              <p className="text-[10px] text-slate-400 mt-1.5">
-                Sélectionnez d'un coup toutes les images (PNG, JPG, WEBP) de votre épisode dans l'ordre.
-              </p>
-            </div>
+
+            {isUploading ? (
+              <div className="space-y-1.5 py-1">
+                <div className="text-xs font-bold text-purple-300 flex items-center justify-center gap-2">
+                  <span>Compression & Intégration en cours...</span>
+                  <span className="font-mono">
+                    {uploadProgress?.current}/{uploadProgress?.total}
+                  </span>
+                </div>
+                <div className="w-48 mx-auto bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-purple-500 h-full transition-all duration-200"
+                    style={{
+                      width: `${
+                        uploadProgress
+                          ? Math.round((uploadProgress.current / uploadProgress.total) * 100)
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-xl shadow-lg cursor-pointer tap-active inline-flex items-center gap-2 text-xs"
+                >
+                  <FileArchive className="w-4 h-4" />
+                  <span>Glisser-déposer ou Parcourir vos fichiers (01.jpg, 02.jpg...)</span>
+                </button>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  Glissez tous vos fichiers découpés d'un coup. Les images sont compressées et triées automatiquement par ordre numérique.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* ZONE 2 : OU AJOUT PAR LOT D'URLS WEB */}

@@ -102,7 +102,7 @@ export const CatalogueView: React.FC = () => {
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-2 leading-tight font-['Outfit',sans-serif]">
+              <h1 className="text-3xl sm:text-5xl font-black text-white mb-2 leading-none font-almodobar tracking-wide">
                 {featuredWork.title}
               </h1>
 
@@ -232,9 +232,9 @@ export const CatalogueView: React.FC = () => {
       {/* CATALOGUE GRID */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2 font-almodobar tracking-wide">
             <span>Catalogue des séries</span>
-            <span className="text-xs text-slate-400 font-normal">({filteredWorks.length} résultats)</span>
+            <span className="text-xs text-slate-400 font-normal font-sans">({filteredWorks.length} résultats)</span>
           </h2>
         </div>
 
@@ -303,10 +303,10 @@ export const CatalogueView: React.FC = () => {
                   {/* Info Card */}
                   <div className="p-3 sm:p-3.5 flex flex-col flex-1 justify-between">
                     <div>
-                      <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">
+                      <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1 font-almodobar tracking-wide">
                         {work.title}
                       </h3>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5 font-sans">
                         {work.genres.slice(0, 2).join(' • ')}
                       </p>
                     </div>

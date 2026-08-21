@@ -19,6 +19,8 @@ import {
   Zap,
   TrendingUp,
   Compass,
+  Eye,
+  Bell,
 } from 'lucide-react';
 import { OziLogo } from '../common/OziLogo';
 import { WorkDetailView } from '../app/WorkDetailView';
@@ -34,6 +36,8 @@ import { SideDrawer } from './SideDrawer';
 import { ShopDrawer, CartItem } from '../shop/ShopDrawer';
 import { CoinShopModal } from '../shop/CoinShopModal';
 import { PlayableGameModal } from '../games/PlayableGameModal';
+import { NotificationsCenterModal } from '../common/NotificationsCenterModal';
+import { notificationService } from '../../lib/notificationService';
 import { Game } from '../../types';
 
 export const MobileAppExperience: React.FC = () => {
@@ -58,6 +62,8 @@ export const MobileAppExperience: React.FC = () => {
   // Navigation locale
   const [activeTab, setActiveTab] = useState<'home' | 'library' | 'games' | 'blog' | 'profile'>('home');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
@@ -65,17 +71,15 @@ export const MobileAppExperience: React.FC = () => {
   const [gameCategory, setGameCategory] = useState<string>('all');
   const [playingGame, setPlayingGame] = useState<Game | null>(null);
 
-  // Panier e-commerce
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      id: 'merch-1',
-      title: 'Artbook Officiel Vol. 1',
-      price: 39,
-      priceFormatted: '39€',
-      image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
-      quantity: 1,
-    },
-  ]);
+  React.useEffect(() => {
+    const unsub = notificationService.subscribe((list) => {
+      setUnreadNotifsCount(list.filter((n) => !n.read).length);
+    });
+    return () => unsub();
+  }, []);
+
+  // Panier e-commerce (vide par défaut pour une interface épurée sans badge rouge parasite)
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   const handleAddToCart = (item: {
     id: string;
@@ -309,12 +313,26 @@ export const MobileAppExperience: React.FC = () => {
             </div>
           </div>
 
-          {/* ZONE DROITE : Recherche + Boutique avec icônes de taille généreuse */}
+          {/* ZONE DROITE : Notifications + Recherche + Boutique avec icônes fluides sans carré d'arrière-plan */}
           <div className="flex items-center justify-end gap-1.5">
             <button
+              onClick={() => setIsNotificationsOpen(true)}
+              className="text-slate-300 hover:text-white p-1.5 transition-colors cursor-pointer relative tap-active"
+              aria-label="Notifications"
+              title="Centre de notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadNotifsCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ff5a50] text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-[#ff5a50]/40">
+                  {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`p-2 rounded-xl transition-colors cursor-pointer tap-active ${
-                isSearchOpen ? 'bg-[#ff5a50] text-white' : 'text-slate-300 hover:text-white bg-white/5 hover:bg-white/10'
+              className={`p-1.5 transition-colors cursor-pointer tap-active ${
+                isSearchOpen ? 'text-[#ff5a50]' : 'text-slate-300 hover:text-white'
               }`}
               aria-label="Recherche"
               title="Rechercher une série"
@@ -324,7 +342,7 @@ export const MobileAppExperience: React.FC = () => {
 
             <button
               onClick={() => setIsShopOpen(true)}
-              className="text-slate-300 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer relative tap-active"
+              className="text-slate-300 hover:text-white p-1.5 transition-colors cursor-pointer relative tap-active"
               aria-label="Boutique"
               title="Boutique & Goodies"
             >
@@ -371,66 +389,8 @@ export const MobileAppExperience: React.FC = () => {
           {activeTab === 'home' && (
             <div className="space-y-5 animate-in fade-in duration-200">
               
-              {/* ========================================================================= */}
-              {/* NOUVELLE BARRE UX PRIMORDIALE : 3 ACTIONS ESSENTIELLES (Lire, Jouer, Coins) */}
-              {/* ========================================================================= */}
-              <div className="pt-3 px-3.5">
-                <div className="grid grid-cols-3 gap-2.5 p-2 bg-[#121422] border border-white/10 rounded-2xl shadow-xl">
-                  {/* 1. LIRE LE DERNIER CHAPITRE */}
-                  <button
-                    onClick={() => {
-                      const firstWork = works[0];
-                      const chList = chapters.filter((c) => c.workId === firstWork?.id);
-                      const targetCh = chList[0] || chapters[0];
-                      if (firstWork && targetCh) {
-                        openReader(firstWork.id, targetCh.id);
-                      } else if (firstWork) {
-                        openWorkDetail(firstWork.id);
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-gradient-to-b from-[#ff5a50]/20 to-[#ff5a50]/5 border border-[#ff5a50]/40 hover:border-[#ff5a50] text-center transition-all cursor-pointer tap-active group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-[#ff5a50] text-white flex items-center justify-center shadow-md shadow-[#ff5a50]/30 mb-1.5 group-hover:scale-110 transition-transform">
-                      <BookOpen className="w-4 h-4 fill-white" />
-                    </div>
-                    <span className="text-[11px] font-black text-white leading-tight">Lire</span>
-                    <span className="text-[9px] text-[#ff5a50] font-bold">Webtoons</span>
-                  </button>
-
-                  {/* 2. JOUER AUX MINI-JEUX ARCADE */}
-                  <button
-                    onClick={() => {
-                      if (games.length > 0) {
-                        setPlayingGame(games[0]);
-                      } else {
-                        setActiveTab('games');
-                      }
-                    }}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-gradient-to-b from-purple-500/20 to-purple-500/5 border border-purple-500/40 hover:border-purple-500 text-center transition-all cursor-pointer tap-active group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-600/30 mb-1.5 group-hover:scale-110 transition-transform">
-                      <Gamepad2 className="w-4 h-4" />
-                    </div>
-                    <span className="text-[11px] font-black text-white leading-tight">Jouer</span>
-                    <span className="text-[9px] text-purple-300 font-bold">Arcade</span>
-                  </button>
-
-                  {/* 3. RECHARGER DES COINS */}
-                  <button
-                    onClick={() => openCoinShop()}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-gradient-to-b from-amber-500/20 to-amber-500/5 border border-amber-500/40 hover:border-amber-500 text-center transition-all cursor-pointer tap-active group"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-black flex items-center justify-center shadow-md shadow-amber-500/30 mb-1.5 group-hover:scale-110 transition-transform">
-                      <Coins className="w-4 h-4 text-black" />
-                    </div>
-                    <span className="text-[11px] font-black text-amber-300 leading-tight">Pièces</span>
-                    <span className="text-[9px] text-amber-400 font-bold">Wave & CB</span>
-                  </button>
-                </div>
-              </div>
-
               {/* FILTRES CATÉGORIES / GENRES HORIZONTAUX TACTILES */}
-              <div className="px-3.5">
+              <div className="px-3.5 pt-3">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                   {allGenres.map((genre) => (
                     <button
@@ -442,16 +402,16 @@ export const MobileAppExperience: React.FC = () => {
                           : 'bg-[#181a28] text-slate-400 hover:text-white border border-white/5'
                       }`}
                     >
-                      {genre === 'all' ? '✨ Tout' : genre}
+                      {genre === 'all' ? 'Tout' : genre}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* CARTE HERO GRAND FORMAT ULTRA-POLISHED */}
+              {/* CARTE HERO BANNIÈRE (Hauteur réduite et plus compacte) */}
               <div
                 onClick={() => openWorkDetail(featuredWork.id)}
-                className="relative mx-3.5 aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl border border-white/10 cursor-pointer group tap-active"
+                className="relative mx-3.5 h-64 sm:h-72 overflow-hidden shadow-2xl cursor-pointer group tap-active"
               >
                 <img
                   src={featuredWork.coverUrl}
@@ -481,7 +441,7 @@ export const MobileAppExperience: React.FC = () => {
                   <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
                     Par {featuredWork.author}
                   </div>
-                  <h2 className="text-2xl font-black text-white font-['Outfit'] drop-shadow-md leading-tight mb-3">
+                  <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
                     {featuredWork.title}
                   </h2>
 
@@ -551,7 +511,7 @@ export const MobileAppExperience: React.FC = () => {
                 <div className="flex items-center justify-between pr-3.5">
                   <div className="flex items-center gap-2">
                     <Flame className="w-5 h-5 text-[#ff5a50] fill-[#ff5a50]" />
-                    <h3 className="text-base font-black text-white font-['Outfit']">
+                    <h3 className="text-base font-black text-white font-almodobar tracking-wide">
                       Populaire cette semaine
                     </h3>
                   </div>
@@ -597,12 +557,16 @@ export const MobileAppExperience: React.FC = () => {
                         </button>
                       </div>
                       <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate">{work.title}</h4>
+                        <h4 className="text-xs font-bold text-white truncate font-almodobar tracking-wide">{work.title}</h4>
                         <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
                           <span className="flex items-center gap-0.5 text-amber-400 font-bold">
                             <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
                           </span>
                           <span>{work.genres[0]}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
+                          <Eye className="w-2.5 h-2.5 text-slate-500" />
+                          <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
                         </div>
                       </div>
                     </div>
@@ -615,7 +579,7 @@ export const MobileAppExperience: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-base font-black text-white font-['Outfit']">
+                    <h3 className="text-base font-black text-white font-almodobar tracking-wide">
                       Dernières Sorties
                     </h3>
                   </div>
@@ -641,7 +605,7 @@ export const MobileAppExperience: React.FC = () => {
                           Ch. {work.totalChapters || 12}
                         </span>
 
-                        {/* Bouton de lecture directe 1-clic */}
+                        {/* Bouton de lecture directe 1-clic en bas à droite */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -653,17 +617,21 @@ export const MobileAppExperience: React.FC = () => {
                               openWorkDetail(work.id);
                             }
                           }}
-                          className="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
+                          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
                           title="Lire le 1er chapitre"
                         >
                           <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
                         </button>
                       </div>
                       <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate">{work.title}</h4>
+                        <h4 className="text-xs font-bold text-white truncate font-almodobar tracking-wide">{work.title}</h4>
                         <p className="text-[10px] text-slate-400 truncate mt-0.5">
                           {work.genres.join(' • ')}
                         </p>
+                        <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
+                          <Eye className="w-2.5 h-2.5 text-slate-500" />
+                          <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -675,7 +643,7 @@ export const MobileAppExperience: React.FC = () => {
           {/* ONGLET 2 : BIBLIOTHÈQUE */}
           {activeTab === 'library' && (
             <div className="p-4">
-              <h2 className="text-lg font-black text-white font-['Outfit'] mb-4">
+              <h2 className="text-lg font-black text-white font-almodobar tracking-wide mb-4">
                 Ma Bibliothèque
               </h2>
               <UserProfileView initialTab="library" onOpenAuth={() => setIsAuthOpen(true)} />
@@ -689,7 +657,7 @@ export const MobileAppExperience: React.FC = () => {
               {/* Header Game Center */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-black text-white font-['Outfit'] flex items-center gap-1.5">
+                  <h2 className="text-xl font-black text-white font-almodobar tracking-wide flex items-center gap-1.5">
                     <span>🎮 OZI Game Center</span>
                   </h2>
                   <p className="text-xs text-slate-400">Mini-jeux d'arcade basés sur vos webtoons</p>
@@ -895,6 +863,12 @@ export const MobileAppExperience: React.FC = () => {
           game={playingGame}
           isOpen={!!playingGame}
           onClose={() => setPlayingGame(null)}
+        />
+
+        {/* Modale du Centre de Notifications */}
+        <NotificationsCenterModal
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
         />
       </div>
     </div>

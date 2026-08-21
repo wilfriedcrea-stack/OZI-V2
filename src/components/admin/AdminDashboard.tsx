@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useOzi } from '../../context/OziContext';
 import { Work, Chapter, Game, Article, Genre, WorkType, WorkStatus, ChapterPage } from '../../types';
 import {
@@ -24,8 +24,13 @@ import {
   Image as ImageIcon,
   MessageSquare,
   Sparkles,
+  Loader2,
+  Bell,
+  Send,
 } from 'lucide-react';
 import { WebtoonChapterEditor } from './WebtoonChapterEditor';
+import { compressImageFile } from '../../lib/imageUploader';
+import { notificationService } from '../../lib/notificationService';
 
 const GENRE_LIST: Genre[] = [
   'Action',
@@ -73,8 +78,38 @@ export const AdminDashboard: React.FC = () => {
   } = useOzi();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'works' | 'chapters' | 'users' | 'games' | 'articles' | 'newsletter' | 'comments'
+    'overview' | 'works' | 'chapters' | 'users' | 'games' | 'articles' | 'newsletter' | 'comments' | 'notifications'
   >('overview');
+
+  // Push Broadcast State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastType, setBroadcastType] = useState<'system' | 'chapter' | 'event' | 'coin'>('system');
+  const [isSendingPush, setIsSendingPush] = useState(false);
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastBody.trim()) {
+      showToast('Veuillez remplir le titre et le message.', 'error');
+      return;
+    }
+
+    setIsSendingPush(true);
+    try {
+      await notificationService.sendNotification(
+        broadcastTitle.trim(),
+        broadcastBody.trim(),
+        broadcastType
+      );
+      showToast('Notification envoyée à tous les utilisateurs ! 🚀', 'success');
+      setBroadcastTitle('');
+      setBroadcastBody('');
+    } catch (err) {
+      showToast("Erreur lors de l'envoi de la notification", 'error');
+    } finally {
+      setIsSendingPush(false);
+    }
+  };
 
   // Work Modal State
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
@@ -133,6 +168,59 @@ export const AdminDashboard: React.FC = () => {
     tags: 'Webtoon, Manga, Actualité',
     readTimeMinutes: 3,
   });
+
+  // Image Upload Loading States
+  const [isUploadingWorkCover, setIsUploadingWorkCover] = useState(false);
+  const [isUploadingWorkBanner, setIsUploadingWorkBanner] = useState(false);
+  const [isUploadingArticleCover, setIsUploadingArticleCover] = useState(false);
+  const workCoverInputRef = useRef<HTMLInputElement>(null);
+  const workBannerInputRef = useRef<HTMLInputElement>(null);
+  const articleCoverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadWorkCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingWorkCover(true);
+    try {
+      const compressed = await compressImageFile(file, 800, 1200, 0.85);
+      setWorkForm((prev) => ({ ...prev, coverUrl: compressed }));
+      showToast('Image de couverture importée avec succès !', 'success');
+    } catch (err) {
+      showToast("Erreur lors de l'upload de la couverture", 'error');
+    } finally {
+      setIsUploadingWorkCover(false);
+    }
+  };
+
+  const handleUploadWorkBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingWorkBanner(true);
+    try {
+      const compressed = await compressImageFile(file, 1400, 700, 0.85);
+      setWorkForm((prev) => ({ ...prev, bannerUrl: compressed }));
+      showToast('Bannière importée avec succès !', 'success');
+    } catch (err) {
+      showToast("Erreur lors de l'upload de la bannière", 'error');
+    } finally {
+      setIsUploadingWorkBanner(false);
+    }
+  };
+
+  const handleUploadArticleCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingArticleCover(true);
+    try {
+      const compressed = await compressImageFile(file, 1200, 800, 0.85);
+      setArticleForm((prev) => ({ ...prev, coverUrl: compressed }));
+      showToast("Image de couverture de l'article importée !", 'success');
+    } catch (err) {
+      showToast("Erreur lors de l'upload de l'image de l'article", 'error');
+    } finally {
+      setIsUploadingArticleCover(false);
+    }
+  };
 
   // --- Handlers for Works ---
   const handleOpenAddWork = () => {
@@ -480,6 +568,16 @@ export const AdminDashboard: React.FC = () => {
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Modération {flaggedComments.length > 0 && `(${flaggedComments.length})`}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('notifications')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-2 ${
+            activeTab === 'notifications' ? 'bg-[#ff5a50] text-white' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5" />
+          <span>Alertes Push</span>
         </button>
       </div>
 
@@ -1074,6 +1172,76 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* TAB 9: ENVOI D'ALERTES & NOTIFICATIONS PUSH */}
+      {activeTab === 'notifications' && (
+        <div className="space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Bell className="w-5 h-5 text-[#ff5a50]" />
+              <span>Diffusion d'Alertes Push & Messages Globaux</span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Envoyez un message direct instantané à tous les lecteurs (alerte nouvel épisode, bonus, événement).
+            </p>
+          </div>
+
+          <form onSubmit={handleSendBroadcast} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4 text-xs">
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Type d'Alerte</label>
+              <select
+                value={broadcastType}
+                onChange={(e: any) => setBroadcastType(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#ff5a50]"
+              >
+                <option value="system">Notification Générale & Annonce</option>
+                <option value="chapter">Sortie de Chapitre Webtoon</option>
+                <option value="coin">Offre Promo / Rechargement Coins</option>
+                <option value="event">Événement & Concours</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Titre de la notification</label>
+              <input
+                type="text"
+                required
+                value={broadcastTitle}
+                onChange={(e) => setBroadcastTitle(e.target.value)}
+                placeholder="Ex: ⚡ Chapitre 45 disponible !"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#ff5a50]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Message d'alerte (Corps du Push)</label>
+              <textarea
+                rows={3}
+                required
+                value={broadcastBody}
+                onChange={(e) => setBroadcastBody(e.target.value)}
+                placeholder="Ex: L'épisode spécial de votre série préférée vient de sortir avec sa bande-son exclusive. Bonne lecture !"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-[#ff5a50]"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSendingPush}
+                className="px-5 py-2.5 bg-[#ff5a50] hover:bg-[#ff463b] text-white font-extrabold text-xs rounded-xl shadow-lg flex items-center gap-2 cursor-pointer tap-active transition-all"
+              >
+                {isSendingPush ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>{isSendingPush ? 'Diffusion en cours...' : 'Envoyer la notification à tous les lecteurs'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* MODAL: ADD / EDIT WORK */}
       {isWorkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs overflow-y-auto">
@@ -1174,15 +1342,93 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">URL de Couverture</label>
-                <input
-                  type="text"
-                  required
-                  value={workForm.coverUrl}
-                  onChange={(e) => setWorkForm({ ...workForm, coverUrl: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                />
+              {/* Image de couverture avec upload direct ou URL */}
+              <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-300 font-bold">Image de Couverture (Affiche)</label>
+                  <button
+                    type="button"
+                    onClick={() => workCoverInputRef.current?.click()}
+                    disabled={isUploadingWorkCover}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1.5"
+                  >
+                    {isUploadingWorkCover ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isUploadingWorkCover ? 'Traitement...' : 'Uploader depuis mon appareil'}</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={workCoverInputRef}
+                    accept="image/*"
+                    onChange={handleUploadWorkCover}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {workForm.coverUrl && (
+                    <img
+                      src={workForm.coverUrl}
+                      alt="Aperçu"
+                      className="w-12 h-16 object-cover rounded-lg border border-slate-700 shrink-0"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    required
+                    value={workForm.coverUrl}
+                    onChange={(e) => setWorkForm({ ...workForm, coverUrl: e.target.value })}
+                    placeholder="URL de l'image (ex: https://... ou fichier importé)"
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Image de bannière (Hero) avec upload direct */}
+              <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-300 font-bold">Bannière Panoramique (Optionnel)</label>
+                  <button
+                    type="button"
+                    onClick={() => workBannerInputRef.current?.click()}
+                    disabled={isUploadingWorkBanner}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1.5"
+                  >
+                    {isUploadingWorkBanner ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isUploadingWorkBanner ? 'Traitement...' : 'Uploader une bannière'}</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={workBannerInputRef}
+                    accept="image/*"
+                    onChange={handleUploadWorkBanner}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {workForm.bannerUrl && (
+                    <img
+                      src={workForm.bannerUrl}
+                      alt="Aperçu Bannière"
+                      className="w-20 h-10 object-cover rounded-lg border border-slate-700 shrink-0"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    value={workForm.bannerUrl || ''}
+                    onChange={(e) => setWorkForm({ ...workForm, bannerUrl: e.target.value })}
+                    placeholder="URL de la bannière large ou fichier importé"
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-xs"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1289,15 +1535,49 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">URL de l'image de couverture</label>
-                <input
-                  type="text"
-                  required
-                  value={articleForm.coverUrl}
-                  onChange={(e) => setArticleForm({ ...articleForm, coverUrl: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
+              {/* Image de couverture de l'article avec upload direct ou URL */}
+              <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-300 font-bold">Image de Couverture</label>
+                  <button
+                    type="button"
+                    onClick={() => articleCoverInputRef.current?.click()}
+                    disabled={isUploadingArticleCover}
+                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1.5"
+                  >
+                    {isUploadingArticleCover ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isUploadingArticleCover ? 'Traitement...' : 'Uploader depuis mon appareil'}</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={articleCoverInputRef}
+                    accept="image/*"
+                    onChange={handleUploadArticleCover}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {articleForm.coverUrl && (
+                    <img
+                      src={articleForm.coverUrl}
+                      alt="Aperçu Article"
+                      className="w-16 h-10 object-cover rounded-lg border border-slate-700 shrink-0"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    required
+                    value={articleForm.coverUrl}
+                    onChange={(e) => setArticleForm({ ...articleForm, coverUrl: e.target.value })}
+                    placeholder="URL de l'image (ex: https://... ou fichier importé)"
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 text-xs"
+                  />
+                </div>
               </div>
 
               <div>

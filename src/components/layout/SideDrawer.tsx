@@ -72,7 +72,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.username}
-                  className="w-11 h-11 rounded-full object-cover border-2 border-[#ff5a50]"
+                  className="w-11 h-11 avatar-round object-cover border-2 border-[#ff5a50]"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-black text-white truncate">{currentUser.username}</div>

@@ -93,19 +93,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
       <div className="flex flex-col items-center text-center pt-2">
         {/* Avatar avec cercle dégradé corail et bouton crayon */}
         <div className="relative mb-3">
-          <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-[#ff5a50] to-[#ff8a80] shadow-xl">
+          <div className="w-24 h-24 avatar-round p-1 bg-gradient-to-tr from-[#ff5a50] to-[#ff8a80] shadow-xl">
             <img
               src={
                 currentUser?.avatar ||
                 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'
               }
               alt="Profil"
-              className="w-full h-full rounded-full object-cover bg-slate-900"
+              className="w-full h-full avatar-round object-cover bg-slate-900"
             />
           </div>
           <button
             onClick={() => setShowEditModal(true)}
-            className="absolute bottom-0 right-0 w-7 h-7 bg-[#ff5a50] hover:bg-[#ff453b] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[#0d0e15] cursor-pointer"
+            className="absolute bottom-0 right-0 w-7 h-7 bg-[#ff5a50] hover:bg-[#ff453b] text-white avatar-round flex items-center justify-center shadow-lg cursor-pointer"
             aria-label="Modifier l'avatar"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -120,13 +120,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
           {currentUser?.email || 'alexandre.d@example.com'}
         </p>
 
-        {/* Badges pills */}
-        <div className="flex items-center gap-2 mt-3">
-          <span className="px-3 py-1 bg-[#ff5a50]/15 border border-[#ff5a50]/50 text-[#ff7a70] text-[11px] font-bold rounded-full flex items-center gap-1">
-            <Award className="w-3.5 h-3.5" /> Lecteur Actif
+        {/* Badges sans encadrement/bordure */}
+        <div className="flex items-center gap-4 mt-2.5">
+          <span className="text-[#ff7a70] text-xs font-bold flex items-center gap-1.5">
+            <Award className="w-4 h-4" /> Lecteur Actif
           </span>
-          <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold rounded-full flex items-center gap-1">
-            <Coins className="w-3.5 h-3.5" /> {currentUser?.coinsBalance || 0} Coins
+          <span className="text-slate-600">•</span>
+          <span className="text-amber-300 text-xs font-bold flex items-center gap-1.5">
+            <Coins className="w-4 h-4 text-amber-400" /> {currentUser?.coinsBalance || 0} Coins
           </span>
         </div>
       </div>
@@ -134,10 +135,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
       {/* PORTEFEUILLE OZI COINS & MONÉTISATION */}
       <div className="p-4 bg-gradient-to-br from-[#1a1728] via-[#141624] to-[#121422] border border-amber-500/30 rounded-3xl space-y-3.5 shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <Coins className="w-5 h-5" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Coins className="w-6 h-6 text-amber-400 shrink-0" />
             <div>
               <div className="text-xs font-black text-white font-['Outfit']">Portefeuille OZI Coins</div>
               <div className="text-[10px] text-slate-400">
@@ -181,9 +180,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
       {isAdmin && (
         <div className="p-4 bg-gradient-to-r from-purple-950/70 to-[#141624] border border-purple-500/40 rounded-2xl flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300">
-              <Shield className="w-5 h-5" />
-            </div>
+            <Shield className="w-6 h-6 text-purple-300 shrink-0" />
             <div>
               <div className="text-xs font-bold text-white flex items-center gap-1.5">
                 <span>Panneau d'Administration</span>
@@ -215,9 +212,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <User className="w-4 h-4" />
-              </div>
+              <User className="w-5 h-5 text-slate-300 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Modifier les informations</div>
                 <div className="text-[10px] text-slate-400">Nom, email, mot de passe</div>
@@ -228,9 +223,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
 
           <button className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <CreditCard className="w-4 h-4" />
-              </div>
+              <CreditCard className="w-5 h-5 text-slate-300 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Abonnement & Facturation</div>
                 <div className="text-[10px] text-slate-400">Gérer le forfait Premium</div>
@@ -251,19 +244,17 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
           {/* Mode Sombre Toggle */}
           <div className="p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <Moon className="w-4 h-4" />
-              </div>
+              <Moon className="w-5 h-5 text-slate-300 shrink-0" />
               <span className="text-xs font-bold text-white">Mode sombre</span>
             </div>
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
+              className={`w-11 h-6 rounded-pill p-0.5 transition-colors cursor-pointer ${
                 isDarkMode ? 'bg-[#ff5a50]' : 'bg-slate-700'
               }`}
             >
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                className={`w-5 h-5 rounded-pill bg-white transition-transform ${
                   isDarkMode ? 'translate-x-5' : 'translate-x-0'
                 }`}
               ></div>
@@ -273,9 +264,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
           {/* Notifications */}
           <button className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <Bell className="w-4 h-4" />
-              </div>
+              <Bell className="w-5 h-5 text-slate-300 shrink-0" />
               <span className="text-xs font-bold text-white">Notifications</span>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-500" />
@@ -284,9 +273,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
           {/* Langue */}
           <button className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <Globe className="w-4 h-4" />
-              </div>
+              <Globe className="w-5 h-5 text-slate-300 shrink-0" />
               <span className="text-xs font-bold text-white">Langue</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -309,9 +296,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                <Gamepad2 className="w-4 h-4" />
-              </div>
+              <Gamepad2 className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Game Center & Mini-Jeux</div>
                 <div className="text-[10px] text-slate-400">Gagnez des trophées et des pièces bonus</div>
@@ -325,9 +310,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
-                <Newspaper className="w-4 h-4" />
-              </div>
+              <Newspaper className="w-5 h-5 text-cyan-400 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Actus & Carnets de Création</div>
                 <div className="text-[10px] text-slate-400">Interviews, secrets d'auteurs et nouveautés</div>
@@ -341,9 +324,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#ff5a50]/10 text-[#ff5a50] flex items-center justify-center">
-                <Coins className="w-4 h-4" />
-              </div>
+              <Coins className="w-5 h-5 text-[#ff5a50] shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Boutique de Pièces OZI</div>
                 <div className="text-[10px] text-slate-400">Packs Wave, Orange Money et Cartes</div>
@@ -366,9 +347,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <Scale className="w-4 h-4" />
-              </div>
+              <Scale className="w-5 h-5 text-slate-300 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Mentions Légales & CGU</div>
                 <div className="text-[10px] text-slate-400">Conditions générales, politique de confidentialité</div>
@@ -379,9 +358,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
 
           <div className="p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-slate-300">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-              </div>
+              <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <div className="text-xs font-bold text-white">Version de l'application</div>
                 <div className="text-[10px] text-slate-400">OZI Mobile Native v1.2.0 • Build Android</div>

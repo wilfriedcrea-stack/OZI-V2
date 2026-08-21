@@ -124,7 +124,7 @@ export const CoinShopModal: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black text-white font-['Outfit']">Boutique OZI Coins</h2>
+                <h2 className="text-base font-black text-white font-almodobar tracking-wide">Boutique OZI Coins</h2>
                 <OziLogo size="xs" />
               </div>
               <p className="text-[11px] text-slate-400">

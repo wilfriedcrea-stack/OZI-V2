@@ -20,6 +20,7 @@ import {
   Music,
 } from 'lucide-react';
 import { OziLogo } from '../common/OziLogo';
+import { CommentsModal } from './CommentsModal';
 
 interface WorkDetailViewProps {
   onOpenShop?: () => void;
@@ -44,6 +45,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
   const [sortAscending, setSortAscending] = useState(false);
   const [showAllChapters, setShowAllChapters] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<string[]>([]);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
 
   if (!currentWork) {
     return (
@@ -163,7 +165,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
-          <h1 className="text-2xl font-black text-white font-['Outfit'] drop-shadow-md leading-tight mb-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-1.5 tracking-wide">
             {currentWork.title}
           </h1>
           <p className="text-xs text-slate-300 font-medium">
@@ -230,7 +232,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
       <div className="px-4 mb-8">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-black text-white font-['Outfit']">Chapitres & Épisodes</h2>
+            <h2 className="text-base font-black text-white font-almodobar tracking-wide">Chapitres & Épisodes</h2>
             <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-slate-400">
               {currentWork.totalChapters || effectiveChapters.length}
             </span>
@@ -271,16 +273,16 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
                     openReader(currentWork.id, chapter.id);
                   }
                 }}
-                className={`p-2.5 rounded-2xl flex items-center gap-3 cursor-pointer active:scale-98 transition-all border ${
+                className={`h-[84px] rounded-2xl flex items-center gap-3.5 cursor-pointer active:scale-98 transition-all border overflow-hidden pr-3.5 ${
                   isFastPass
                     ? 'bg-[#181420] hover:bg-[#201a2c] border-amber-500/25'
                     : 'bg-[#141624] hover:bg-[#1c1e30] border-white/10'
                 }`}
               >
-                {/* Miniature avec liseré */}
+                {/* Miniature pleine hauteur collée à gauche et de dimensions uniformes */}
                 <div
-                  className={`w-16 h-16 rounded-xl overflow-hidden bg-slate-900 shrink-0 relative border ${
-                    isFastPass ? 'border-amber-500/40' : 'border-cyan-500/30'
+                  className={`w-20 h-full shrink-0 relative bg-slate-900 overflow-hidden ${
+                    isFastPass ? 'border-r border-amber-500/30' : 'border-r border-white/5'
                   }`}
                 >
                   <img
@@ -297,8 +299,8 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
                 </div>
 
                 {/* Infos Chapitre */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between text-xs mb-0.5">
+                <div className="flex-1 min-w-0 py-2.5 flex flex-col justify-center">
+                  <div className="flex items-center justify-between text-xs mb-1">
                     <h4 className="font-bold text-white truncate">
                       Épisode {chapter.chapterNumber} : {chapter.title}
                     </h4>
@@ -358,9 +360,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
       <div className="px-4 mb-10">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-[#ff5a50]/15 flex items-center justify-center text-[#ff5a50]">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
+            <ShoppingBag className="w-5 h-5 text-[#ff5a50]" />
             <h3 className="text-base font-black text-white font-['Outfit']">Boutique Officielle</h3>
           </div>
           {onOpenShop && (
@@ -481,12 +481,28 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
         {/* Bouton Voir toute la collection */}
         <button
           onClick={onOpenShop}
-          className="w-full py-3.5 bg-[#181a28] hover:bg-[#202336] text-white text-xs font-bold rounded-2xl border border-white/10 flex items-center justify-center gap-2 transition-colors cursor-pointer shadow"
+          className="w-full py-3.5 bg-[#181a28] hover:bg-[#202336] text-white text-xs font-bold rounded-2xl border border-white/10 flex items-center justify-center gap-2 transition-colors cursor-pointer shadow mb-4"
         >
           <ShoppingBag className="w-4 h-4 text-[#ff5a50]" />
           <span>Accéder au panier de la collection</span>
         </button>
+
+        {/* Bouton Voir les Commentaires & Avis de la Série */}
+        <button
+          onClick={() => setIsCommentsOpen(true)}
+          className="w-full py-3.5 bg-[#141624] hover:bg-[#1a1d2e] text-white text-xs font-bold rounded-2xl border border-cyan-500/20 flex items-center justify-center gap-2 transition-colors cursor-pointer shadow"
+        >
+          <MessageSquare className="w-4 h-4 text-cyan-400" />
+          <span>Espace Commentaires & Échanges Lecteurs / Auteur</span>
+        </button>
       </div>
+
+      {/* Modale des commentaires */}
+      <CommentsModal
+        isOpen={isCommentsOpen}
+        onClose={() => setIsCommentsOpen(false)}
+        workId={currentWork.id}
+      />
     </div>
   );
 };

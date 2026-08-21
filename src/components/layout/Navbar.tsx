@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOzi } from '../../context/OziContext';
 import {
   BookOpen,
@@ -14,9 +14,12 @@ import {
   Menu,
   X,
   Plus,
+  Bell,
 } from 'lucide-react';
 import { AuthModal } from '../auth/AuthModal';
 import { OziLogo } from '../common/OziLogo';
+import { NotificationsCenterModal } from '../common/NotificationsCenterModal';
+import { notificationService, InAppNotification } from '../../lib/notificationService';
 
 export const Navbar: React.FC<{ onOpenAuthModal?: () => void }> = ({ onOpenAuthModal }) => {
   const {
@@ -34,9 +37,18 @@ export const Navbar: React.FC<{ onOpenAuthModal?: () => void }> = ({ onOpenAuthM
   } = useOzi();
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub = notificationService.subscribe((list) => {
+      setUnreadNotifsCount(list.filter((n) => !n.read).length);
+    });
+    return () => unsub();
+  }, []);
 
   const handleNavClick = (view: any) => {
     setActiveView(view);
@@ -147,6 +159,20 @@ export const Navbar: React.FC<{ onOpenAuthModal?: () => void }> = ({ onOpenAuthM
               </div>
             )}
 
+            {/* Notification Bell Button */}
+            <button
+              onClick={() => setIsNotificationsOpen(true)}
+              className="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-all cursor-pointer tap-active"
+              title="Centre de notifications OZI"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotifsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#ff5a50] text-white text-[9px] font-black flex items-center justify-center shadow-[0_0_8px_#ff5a50]">
+                  {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
+                </span>
+              )}
+            </button>
+
             {/* Mobile Simulator Toggle */}
             <button
               onClick={() => setMobilePreviewMode(!mobilePreviewMode)}
@@ -186,7 +212,7 @@ export const Navbar: React.FC<{ onOpenAuthModal?: () => void }> = ({ onOpenAuthM
                   <img
                     src={currentUser.avatar}
                     alt={currentUser.username}
-                    className="w-7 h-7 rounded-full object-cover border border-amber-500/50"
+                    className="w-7 h-7 avatar-round object-cover border border-amber-500/50"
                   />
                   <span className="hidden sm:inline text-xs font-medium text-slate-200 truncate max-w-[100px]">
                     {currentUser.username}
@@ -332,6 +358,12 @@ export const Navbar: React.FC<{ onOpenAuthModal?: () => void }> = ({ onOpenAuthM
 
       {/* Global Auth Modal */}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
+      {/* Global Notifications Center Modal */}
+      <NotificationsCenterModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
     </>
   );
 };
