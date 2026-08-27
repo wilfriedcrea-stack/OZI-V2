@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useOzi } from '../../context/OziContext';
 import {
   User,
@@ -7,6 +7,8 @@ import {
   Bell,
   Globe,
   BookOpen,
+  Library,
+  Bookmark,
   Flame,
   LogOut,
   Trash2,
@@ -27,12 +29,29 @@ import {
   Sparkles,
   HelpCircle,
   Share2,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  Play,
+  ArrowRight,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface UserProfileViewProps {
   initialTab?: 'profile' | 'library';
   onOpenAuth?: () => void;
 }
+
+const PRESET_AVATARS = [
+  { id: 'av-1', label: 'Héros Solaire', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-2', label: 'Créateur OZI', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-3', label: 'Guerrière Mystique', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-4', label: 'Cyber Hacker', url: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-5', label: 'Chevalier d’Ombre', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-6', label: 'Étoile Céleste', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-7', label: 'Traqueur Urbain', url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80' },
+  { id: 'av-8', label: 'Invocatrice', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80' },
+];
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = 'profile', onOpenAuth }) => {
   const {
@@ -43,15 +62,49 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
     deleteUserAccount,
     updateProfile,
     bookmarkedWorks,
+    works,
+    chapters,
     openWorkDetail,
+    openReader,
     openCoinShop,
+    showToast,
   } = useOzi();
 
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [librarySubTab, setLibrarySubTab] = useState<'bookmarks' | 'history' | 'unlocked'>('bookmarks');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [editName, setEditName] = useState(currentUser?.username || 'Lecteur OZI');
   const [editEmail, setEditEmail] = useState(currentUser?.email || '');
+  const [editAvatar, setEditAvatar] = useState(
+    currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'
+  );
+  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image trop volumineuse (max 5 Mo).', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const result = uploadEvent.target?.result as string;
+        if (result) {
+          setEditAvatar(result);
+          showToast('Photo importée ! Cliquez sur Enregistrer pour valider.', 'info');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const readingHistory = currentUser?.readHistory || [];
+  const unlockedChapterIds = currentUser?.unlockedChapters || [];
+  const unlockedChaptersList = chapters.filter((c) => unlockedChapterIds.includes(c.id));
 
   // Si on est dans l'onglet bibliothèque
   if (initialTab === 'library') {
@@ -87,10 +140,23 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
   }
 
   return (
-    <div className="px-4 py-4 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in duration-200">
-      
+    <div className="px-4 py-3 space-y-6 font-['Plus_Jakarta_Sans',sans-serif] animate-in fade-in duration-200">
+      {/* Navigation de retour rapide */}
+      <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <button
+          onClick={() => setActiveView('app_catalogue')}
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-xl transition-all cursor-pointer tap-active"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#ff5a50]" />
+          <span>Retour à l'accueil</span>
+        </button>
+        <span className="text-[11px] font-mono text-slate-400 font-bold uppercase tracking-wider">
+          Paramètres & Compte
+        </span>
+      </div>
+
       {/* 1. EN-TÊTE DU PROFIL (Grand avatar avec bouton crayon, nom, email, badges) */}
-      <div className="flex flex-col items-center text-center pt-2">
+      <div className="flex flex-col items-center text-center pt-1">
         {/* Avatar avec cercle dégradé corail et bouton crayon */}
         <div className="relative mb-3">
           <div className="w-24 h-24 avatar-round p-1 bg-gradient-to-tr from-[#ff5a50] to-[#ff8a80] shadow-xl">
@@ -104,11 +170,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
             />
           </div>
           <button
-            onClick={() => setShowEditModal(true)}
-            className="absolute bottom-0 right-0 w-7 h-7 bg-[#ff5a50] hover:bg-[#ff453b] text-white avatar-round flex items-center justify-center shadow-lg cursor-pointer"
+            onClick={() => {
+              setEditAvatar(currentUser?.avatar || PRESET_AVATARS[0].url);
+              setShowAvatarModal(true);
+            }}
+            className="absolute bottom-0 right-0 w-8 h-8 bg-[#ff5a50] hover:bg-[#ff453b] text-white avatar-round flex items-center justify-center shadow-lg cursor-pointer active:scale-95 transition-transform"
             aria-label="Modifier l'avatar"
+            title="Changer de photo de profil"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Camera className="w-4 h-4" />
           </button>
         </div>
 
@@ -200,6 +270,211 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
         </div>
       )}
 
+      {/* MA BIBLIOTHÈQUE & HISTORIQUE INTÉGRÉE AU PROFIL */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-[#ff5a50]/15 border border-[#ff5a50]/30 flex items-center justify-center">
+              <Library className="w-4 h-4 text-[#ff5a50]" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                Ma Bibliothèque
+              </h3>
+              <p className="text-[10px] text-slate-400">Favoris, reprises de lecture et déblocages</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono text-[#ff7a70] bg-[#ff5a50]/10 px-2 py-0.5 rounded-full font-bold border border-[#ff5a50]/20">
+            {bookmarkedWorks.length + readingHistory.length} titres
+          </span>
+        </div>
+
+        {/* Sélecteur de sous-onglets Bibliothèque */}
+        <div className="grid grid-cols-3 p-1 bg-[#141624] border border-white/10 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={() => setLibrarySubTab('bookmarks')}
+            className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              librarySubTab === 'bookmarks'
+                ? 'bg-[#ff5a50] text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+            <span>Favoris ({bookmarkedWorks.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLibrarySubTab('history')}
+            className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              librarySubTab === 'history'
+                ? 'bg-[#ff5a50] text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Historique ({readingHistory.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLibrarySubTab('unlocked')}
+            className={`py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              librarySubTab === 'unlocked'
+                ? 'bg-[#ff5a50] text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Débloqués ({unlockedChaptersList.length})</span>
+          </button>
+        </div>
+
+        {/* CONTENU SOUS-ONGLET 1 : FAVORIS */}
+        {librarySubTab === 'bookmarks' && (
+          <div>
+            {bookmarkedWorks.length === 0 ? (
+              <div className="p-6 text-center bg-[#141624] border border-white/10 rounded-2xl space-y-2">
+                <Bookmark className="w-7 h-7 text-slate-500 mx-auto" />
+                <p className="text-xs text-slate-300 font-bold">Aucune série en favoris pour l'instant</p>
+                <p className="text-[11px] text-slate-400 max-w-[240px] mx-auto">
+                  Enregistrez vos webtoons préférés pour y accéder en un clin d'œil.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('app_catalogue')}
+                  className="mt-2 px-3.5 py-1.5 bg-[#1c1e2e] hover:bg-[#25283d] text-white text-xs font-bold rounded-xl border border-white/10 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-[#ff5a50]" />
+                  <span>Explorer le catalogue</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {bookmarkedWorks.map((work) => (
+                  <div
+                    key={work.id}
+                    onClick={() => openWorkDetail(work.id)}
+                    className="bg-[#141624] border border-white/10 hover:border-[#ff5a50]/40 rounded-2xl overflow-hidden shadow-md cursor-pointer active:scale-95 transition-all group"
+                  >
+                    <div className="aspect-[3/4] bg-slate-900 relative overflow-hidden">
+                      <img
+                        src={work.coverUrl}
+                        alt={work.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm p-1 rounded-full text-[#ff5a50]">
+                        <Bookmark className="w-3.5 h-3.5 fill-[#ff5a50]" />
+                      </div>
+                    </div>
+                    <div className="p-2.5">
+                      <h4 className="text-xs font-bold text-white truncate">{work.title}</h4>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mt-0.5">
+                        <span>{work.totalChapters} chapitres</span>
+                        <span className="text-[#ff7a70] font-bold">★ {work.rating || 4.9}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTENU SOUS-ONGLET 2 : HISTORIQUE */}
+        {librarySubTab === 'history' && (
+          <div>
+            {readingHistory.length === 0 ? (
+              <div className="p-6 text-center bg-[#141624] border border-white/10 rounded-2xl space-y-2">
+                <History className="w-7 h-7 text-slate-500 mx-auto" />
+                <p className="text-xs text-slate-300 font-bold">Aucune lecture récente</p>
+                <p className="text-[11px] text-slate-400 max-w-[240px] mx-auto">
+                  Vos lectures récentes s'afficheront ici avec votre avancement précis.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {readingHistory.map((item, idx) => {
+                  const targetWork = works.find((w) => w.id === item.workId);
+                  const targetChapter = chapters.find((c) => c.id === item.chapterId);
+                  return (
+                    <div
+                      key={`${item.workId}-${item.chapterId}-${idx}`}
+                      onClick={() => openReader(item.workId, item.chapterId)}
+                      className="p-2.5 bg-[#141624] hover:bg-[#1c1e2e] border border-white/10 rounded-2xl flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={targetWork?.coverUrl || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&auto=format&fit=crop&q=80'}
+                          alt={targetWork?.title || 'Série'}
+                          className="w-11 h-14 object-cover rounded-xl shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-white truncate">
+                            {targetWork?.title || 'Série OZI'}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {targetChapter?.title || `Chapitre #${item.chapterId}`}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-bold mt-1">
+                            <Play className="w-2.5 h-2.5 fill-emerald-400" />
+                            <span>Page {item.pageIndex + 1} • Reprendre</span>
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTENU SOUS-ONGLET 3 : DÉBLOQUÉS */}
+        {librarySubTab === 'unlocked' && (
+          <div>
+            {unlockedChaptersList.length === 0 ? (
+              <div className="p-6 text-center bg-[#141624] border border-white/10 rounded-2xl space-y-2">
+                <Lock className="w-7 h-7 text-slate-500 mx-auto" />
+                <p className="text-xs text-slate-300 font-bold">Aucun épisode payant débloqué</p>
+                <p className="text-[11px] text-slate-400 max-w-[240px] mx-auto">
+                  Débloquez des épisodes premiums avec vos pièces OZI pour les conserver à vie.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {unlockedChaptersList.map((chap) => {
+                  const targetWork = works.find((w) => w.id === chap.workId);
+                  return (
+                    <div
+                      key={chap.id}
+                      onClick={() => openReader(chap.workId, chap.id)}
+                      className="p-2.5 bg-[#141624] hover:bg-[#1c1e2e] border border-amber-500/30 rounded-2xl flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 font-mono text-xs font-black">
+                          #{chap.number}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white truncate">{chap.title}</div>
+                          <div className="text-[10px] text-slate-400 truncate">{targetWork?.title}</div>
+                          <span className="text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">
+                            Débloqué à vie
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 2. SECTION PARAMÈTRES DU COMPTE */}
       <div className="space-y-2">
         <h3 className="text-[11px] font-black uppercase tracking-wider text-[#ff5a50] px-1">
@@ -207,6 +482,37 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
         </h3>
 
         <div className="bg-[#141624] border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5">
+          {/* Changer la photo de profil */}
+          <button
+            onClick={() => {
+              setEditAvatar(currentUser?.avatar || PRESET_AVATARS[0].url);
+              setShowAvatarModal(true);
+            }}
+            className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shrink-0 bg-slate-800">
+                <img
+                  src={
+                    currentUser?.avatar ||
+                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'
+                  }
+                  alt="Avatar actuel"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>Photo de profil</span>
+                  <span className="text-[9px] bg-[#ff5a50]/20 text-[#ff7a70] font-bold px-1.5 py-0.5 rounded">Avatar</span>
+                </div>
+                <div className="text-[10px] text-slate-400">Changer d'image, importer ou choisir un style</div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+          </button>
+
+          {/* Modifier nom et email */}
           <button
             onClick={() => setShowEditModal(true)}
             className="w-full p-3.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer text-left"
@@ -414,13 +720,164 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
         </div>
       </div>
 
+      {/* MODAL CHANGER LA PHOTO DE PROFIL */}
+      {showAvatarModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#141624] border border-white/15 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white font-['Outfit'] flex items-center gap-2">
+                <Camera className="w-5 h-5 text-[#ff5a50]" />
+                <span>Photo de profil</span>
+              </h3>
+              <button
+                onClick={() => setShowAvatarModal(false)}
+                className="text-slate-400 hover:text-white p-1 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Aperçu en direct */}
+            <div className="flex flex-col items-center justify-center py-2">
+              <div className="w-24 h-24 avatar-round p-1 bg-gradient-to-tr from-[#ff5a50] to-amber-400 shadow-xl relative">
+                <img
+                  src={editAvatar}
+                  alt="Aperçu avatar"
+                  className="w-full h-full avatar-round object-cover bg-slate-900"
+                />
+              </div>
+              <span className="text-[11px] text-slate-400 mt-2">Aperçu en direct de votre avatar</span>
+            </div>
+
+            {/* Option 1: Importer depuis l'appareil */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-3 px-4 bg-[#1c1e2e] hover:bg-[#25283d] border border-white/10 hover:border-[#ff5a50]/50 rounded-2xl flex items-center justify-center gap-2 text-white text-xs font-bold transition-all cursor-pointer shadow-md active:scale-98"
+            >
+              <Upload className="w-4 h-4 text-[#ff5a50]" />
+              <span>Choisir une photo depuis mon appareil</span>
+            </button>
+
+            {/* Option 2: Galerie d'avatars exclusifs OZI */}
+            <div className="space-y-2 pt-2">
+              <label className="text-[11px] font-bold text-slate-300 block">
+                Ou choisir un avatar de la galerie OZI :
+              </label>
+              <div className="grid grid-cols-4 gap-2.5">
+                {PRESET_AVATARS.map((preset) => {
+                  const isSelected = editAvatar === preset.url;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setEditAvatar(preset.url)}
+                      className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all cursor-pointer p-0.5 ${
+                        isSelected
+                          ? 'border-[#ff5a50] ring-2 ring-[#ff5a50]/50 scale-105'
+                          : 'border-white/10 hover:border-white/40'
+                      }`}
+                      title={preset.label}
+                    >
+                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover rounded-xl" />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-[#ff5a50]/40 flex items-center justify-center rounded-xl">
+                          <Check className="w-5 h-5 text-white stroke-[3]" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Option 3: Lien URL Personnalisé */}
+            <div className="pt-1">
+              <label className="text-[11px] text-slate-400 block mb-1">Ou coller une URL d'image</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={customAvatarUrl}
+                  onChange={(e) => setCustomAvatarUrl(e.target.value)}
+                  className="flex-1 bg-[#1c1e2e] border border-white/10 text-white text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-[#ff5a50]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customAvatarUrl.trim()) {
+                      setEditAvatar(customAvatarUrl.trim());
+                      setCustomAvatarUrl('');
+                    }
+                  }}
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Appliquer
+                </button>
+              </div>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex items-center gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowAvatarModal(false)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await updateProfile({ avatar: editAvatar });
+                  setShowAvatarModal(false);
+                }}
+                className="flex-1 py-2.5 bg-[#ff5a50] hover:bg-[#ff453b] text-white text-xs font-black rounded-xl cursor-pointer transition-colors shadow-lg"
+              >
+                Enregistrer la photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL MODIFIER PROFIL */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-[#141624] border border-white/15 rounded-3xl p-6 space-y-4">
             <h3 className="text-base font-black text-white font-['Outfit']">Modifier mes informations</h3>
+            
+            {/* Raccourci photo dans le modal infos */}
+            <div className="flex items-center gap-3 p-2.5 bg-[#1c1e2e] rounded-2xl border border-white/10">
+              <img
+                src={editAvatar}
+                alt="Avatar"
+                className="w-12 h-12 rounded-full object-cover border border-white/20"
+              />
+              <div className="flex-1">
+                <div className="text-xs font-bold text-white">Photo de profil</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setShowAvatarModal(true);
+                  }}
+                  className="text-[11px] text-[#ff5a50] font-bold hover:underline cursor-pointer flex items-center gap-1 mt-0.5"
+                >
+                  <Camera className="w-3 h-3" /> Changer de photo
+                </button>
+              </div>
+            </div>
+
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Nom d'utilisateur</label>
+              <label className="text-[11px] text-slate-400 block mb-1 font-bold">Nom d'utilisateur</label>
               <input
                 type="text"
                 value={editName}
@@ -429,7 +886,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
               />
             </div>
             <div>
-              <label className="text-[11px] text-slate-400 block mb-1">Adresse Email</label>
+              <label className="text-[11px] text-slate-400 block mb-1 font-bold">Adresse Email</label>
               <input
                 type="email"
                 value={editEmail}
@@ -447,7 +904,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
               <button
                 onClick={async () => {
                   if (editName.trim()) {
-                    await updateProfile({ username: editName.trim(), email: editEmail.trim() });
+                    await updateProfile({
+                      username: editName.trim(),
+                      email: editEmail.trim(),
+                      avatar: editAvatar,
+                    });
                   }
                   setShowEditModal(false);
                 }}

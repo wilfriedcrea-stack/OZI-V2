@@ -15,19 +15,19 @@ export const OziLogo: React.FC<OziLogoProps> = ({
   const [imgError, setImgError] = useState(false);
 
   const sizeClasses = {
-    xs: 'h-6 sm:h-7 w-auto max-w-[85px]',
-    sm: 'h-8 sm:h-9 w-auto max-w-[120px]',
-    md: 'h-9 sm:h-10 w-auto max-w-[145px]',
-    lg: 'h-14 sm:h-16 w-auto max-w-[210px]',
-    xl: 'h-20 sm:h-24 w-auto max-w-[300px]',
+    xs: 'h-7 sm:h-8 w-auto max-w-[100px]',
+    sm: 'h-10 sm:h-11 w-auto max-w-[150px]',
+    md: 'h-12 sm:h-14 w-auto max-w-[200px]',
+    lg: 'h-18 sm:h-20 w-auto max-w-[280px]',
+    xl: 'h-24 sm:h-28 w-auto max-w-[380px]',
   }[size];
 
   const iconSizes = {
-    xs: 'w-6 h-6',
-    sm: 'w-8 h-8',
-    md: 'w-9 h-9',
-    lg: 'w-14 h-14',
-    xl: 'w-20 h-20',
+    xs: 'w-7 h-7',
+    sm: 'w-10 h-10',
+    md: 'w-12 h-12',
+    lg: 'w-18 h-18',
+    xl: 'w-24 h-24',
   }[size];
 
   return (

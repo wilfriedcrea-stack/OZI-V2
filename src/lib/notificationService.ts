@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
+import { LocalNotifications, ActionPerformed } from '@capacitor/local-notifications';
 
 export interface InAppNotification {
   id: string;
@@ -11,10 +11,13 @@ export interface InAppNotification {
   data?: any;
 }
 
+type NotificationClickHandler = (data: any) => void;
+
 class NotificationService {
   private isNative: boolean = false;
   private permissionGranted: boolean = false;
   private listeners: ((notifications: InAppNotification[]) => void)[] = [];
+  private clickHandlers: NotificationClickHandler[] = [];
   private notificationsHistory: InAppNotification[] = [];
   private channelsCreated: boolean = false;
 
@@ -22,15 +25,49 @@ class NotificationService {
     try {
       this.isNative = Capacitor.isNativePlatform();
       this.loadLocalHistory();
+      this.initNativeListeners();
     } catch (e) {
       console.warn('Erreur constructeur notificationService:', e);
     }
   }
 
+  private async initNativeListeners() {
+    if (!this.isNative) return;
+    try {
+      await this.ensureChannels();
+      
+      // Écouteur de clic sur notification native (quand l'utilisateur clique hors de l'application)
+      await LocalNotifications.addListener(
+        'localNotificationActionPerformed',
+        (notificationAction: ActionPerformed) => {
+          const extra = notificationAction.notification.extra;
+          if (extra) {
+            this.clickHandlers.forEach((handler) => handler(extra));
+          }
+        }
+      );
+
+      // Vérifier permissions au démarrage
+      const status = await LocalNotifications.checkPermissions();
+      if (status.display === 'granted') {
+        this.permissionGranted = true;
+      }
+    } catch (e) {
+      console.warn('Erreur init native listeners notification:', e);
+    }
+  }
+
+  public registerClickHandler(handler: NotificationClickHandler) {
+    this.clickHandlers.push(handler);
+    return () => {
+      this.clickHandlers = this.clickHandlers.filter((h) => h !== handler);
+    };
+  }
+
   public async ensureChannels() {
     if (!this.isNative || this.channelsCreated) return;
     try {
-      // Création du canal de notification Android
+      // Création du canal principal de notification Android
       await LocalNotifications.createChannel({
         id: 'ozi_releases',
         name: 'Nouveaux Chapitres & Sorties',
@@ -45,8 +82,8 @@ class NotificationService {
       await LocalNotifications.createChannel({
         id: 'ozi_activity',
         name: 'Activité & Pièces',
-        description: 'Recharges de pièces et réponses aux commentaires',
-        importance: 4,
+        description: 'Recharges de pièces, bonus et réponses aux commentaires',
+        importance: 5,
         visibility: 1,
         vibration: true,
         lights: true,
@@ -69,7 +106,7 @@ class NotificationService {
         this.notificationsHistory = [
           {
             id: 'notif-welcome',
-            title: 'Bienvenue sur OZI Webtoon ! 🎉',
+            title: 'Bienvenue sur OZI Webtoons ! 🎉',
             body: 'Découvrez les meilleurs webtoons et mangas africains.',
             type: 'system',
             read: false,
@@ -159,13 +196,14 @@ class NotificationService {
   }
 
   /**
-   * Déclenche une notification immédiate (sur l'appareil en dehors de l'app + dans le centre de notifications)
+   * Déclenche une notification immédiate ou différée (sur l'écran de verrouillage et le volet Android / navigateur hors appli)
    */
   public async sendNotification(
     title: string,
     body: string,
     type: 'chapter' | 'system' | 'coin' | 'event' = 'system',
-    data?: any
+    data?: any,
+    delaySeconds: number = 0
   ) {
     const notif: InAppNotification = {
       id: `notif-${Date.now()}`,
@@ -180,28 +218,48 @@ class NotificationService {
     // 1. Ajouter dans l'historique in-app
     this.addInAppNotification(notif);
 
-    // 2. Notification système / device
+    // 2. Notification système / device (hors de l'application)
     try {
       if (this.isNative) {
         await this.ensureChannels();
         const channelId = type === 'chapter' ? 'ozi_releases' : 'ozi_activity';
+        const notifId = Math.floor(Math.random() * 90000) + 1000;
+        
         await LocalNotifications.schedule({
           notifications: [
             {
-              id: Math.floor(Math.random() * 90000) + 1000,
+              id: notifId,
               title,
               body,
-              schedule: { at: new Date(Date.now() + 300) },
+              schedule: delaySeconds > 0 
+                ? { at: new Date(Date.now() + delaySeconds * 1000) } 
+                : { at: new Date(Date.now() + 200) },
               channelId,
               extra: data,
+              actionTypeId: 'OPEN_APP',
             },
           ],
         });
-      } else if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
-          icon: '/favicon.ico',
-        });
+      } else if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          if (delaySeconds > 0) {
+            setTimeout(() => {
+              new Notification(title, {
+                body,
+                icon: '/icons/icon-192.png',
+                badge: '/icons/icon-192.png',
+                data,
+              });
+            }, delaySeconds * 1000);
+          } else {
+            new Notification(title, {
+              body,
+              icon: '/icons/icon-192.png',
+              badge: '/icons/icon-192.png',
+              data,
+            });
+          }
+        }
       }
     } catch (e) {
       console.warn('Notification système locale note:', e);
@@ -214,12 +272,50 @@ class NotificationService {
   }
 
   /**
+   * Planifie un rappel de lecture ou bonus quotidien en arrière-plan
+   */
+  public async scheduleDailyReminder(hoursFromNow: number = 24) {
+    try {
+      if (this.isNative) {
+        await this.ensureChannels();
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: 9991,
+              title: '🎁 Votre bonus OZI Coins est disponible !',
+              body: 'Revenez récupérer vos pièces gratuites et lire les derniers chapitres.',
+              schedule: { at: new Date(Date.now() + hoursFromNow * 3600 * 1000) },
+              channelId: 'ozi_activity',
+            },
+          ],
+        });
+      }
+    } catch (e) {
+      console.warn('Erreur planification rappel:', e);
+    }
+  }
+
+  /**
+   * Déclenche une notification de test différée pour tester hors de l'application
+   */
+  public async sendTestExternalNotification(delaySeconds: number = 4) {
+    await this.requestPermissions();
+    await this.sendNotification(
+      '🚀 Test de Notification Hors Appli !',
+      'Ce message s\'affiche directement dans votre volet Android et écran de verrouillage.',
+      'system',
+      { test: true },
+      delaySeconds
+    );
+  }
+
+  /**
    * Déclenche une notification ciblée lors de la publication d'un nouveau chapitre
    */
   public async notifyNewChapter(workTitle: string, chapterTitle: string, workId: string, chapterId: string) {
     await this.sendNotification(
       `🔥 Nouveau Chapitre : ${workTitle}`,
-      `L'épisode "${chapterTitle}" vient d'être publié ! Cliquez pour commencer la lecture.`,
+      `L'épisode "${chapterTitle}" vient d'être publié ! Touchez pour commencer la lecture.`,
       'chapter',
       { workId, chapterId }
     );

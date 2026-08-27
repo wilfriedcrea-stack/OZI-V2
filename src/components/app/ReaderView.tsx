@@ -147,6 +147,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
   const currentChapterId = currentChapter?.id || 'ch-1-1';
   const customPanels = DEFAULT_COMIC_PANELS[currentChapterId];
 
+  // Retour au tout début du chapitre à l'ouverture
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTop = 0;
+  }, [currentChapter?.id, currentWork?.id]);
+
   // Gestion du lecteur Audio en boucle pour le chapitre
   const rawAudioUrl = currentChapter?.audioUrl;
   const currentAudioUrl = formatDirectAudioUrl(rawAudioUrl);

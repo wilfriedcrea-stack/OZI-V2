@@ -60,7 +60,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         }
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "Une erreur est survenue lors de l'authentification.");
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('request')) {
+        setErrorMessage("Veuillez vérifier les informations saisies (email valide et mot de passe de 6 caractères minimum).");
+      } else if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('offline')) {
+        setErrorMessage("Problème de connexion réseau. Veuillez réessayer.");
+      } else {
+        setErrorMessage("Une erreur est survenue lors de l'authentification. Veuillez réessayer.");
+      }
     } finally {
       setLoading(false);
     }
@@ -197,40 +204,94 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         {/* SI CONNEXION GOOGLE DIRECTE */}
         {showGoogleEmailInput ? (
-          <form onSubmit={handleDirectGoogleSubmit} className="space-y-3">
-            <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-[11px] text-blue-200">
-              <span className="font-bold">Connexion avec Google</span> : Confirmez votre adresse email Google pour accéder à votre compte.
-            </div>
-            <div>
-              <label className="text-[11px] text-slate-400 block mb-1 font-bold">Email Google</label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5" />
-                <input
-                  type="email"
-                  placeholder="votre.compte@gmail.com"
-                  value={googleEmailValue}
-                  onChange={(e) => setGoogleEmailValue(e.target.value)}
-                  className="w-full bg-[#1c1e2e] border border-white/10 text-white text-xs pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:border-[#ff5a50]"
-                  required
+          <div className="space-y-3.5 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 p-2.5 bg-blue-950/40 border border-blue-500/30 rounded-2xl">
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
                 />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <div className="text-[11px] leading-tight text-blue-200">
+                <span className="font-bold block text-white">Connexion avec Google</span>
+                Choisissez un compte pour continuer sur OZI.
               </div>
             </div>
+
+            {/* Option 1: Compte Créateur 1-Clic */}
             <button
-              type="submit"
+              type="button"
               disabled={loading}
-              className="w-full py-3 bg-[#4285F4] hover:bg-[#3367D6] disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+              onClick={async () => {
+                setLoading(true);
+                const res = await loginAsGoogleDirect('wilfriedcrea@gmail.com', 'Wilfried (Créateur)');
+                setLoading(false);
+                if (res.success) onClose();
+              }}
+              className="w-full p-3 bg-[#1c1e2e] hover:bg-[#25283d] border border-blue-500/40 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group shadow-md"
             >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Valider la connexion Google</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-red-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+                  W
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
+                    wilfriedcrea@gmail.com
+                  </div>
+                  <div className="text-[10px] text-amber-400 font-medium">Compte Créateur & Admin</div>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-blue-400 group-hover:translate-x-0.5 transition-transform">
+                Continuer →
+              </span>
             </button>
+
+            {/* Option 2: Autre compte Google */}
+            <form onSubmit={handleDirectGoogleSubmit} className="space-y-2.5 pt-1">
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1 font-bold">Autre adresse Google</label>
+                <div className="relative flex items-center">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5" />
+                  <input
+                    type="email"
+                    placeholder="votre.adresse@gmail.com"
+                    value={googleEmailValue}
+                    onChange={(e) => setGoogleEmailValue(e.target.value)}
+                    className="w-full bg-[#1c1e2e] border border-white/10 text-white text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#4285F4]"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-[#4285F4] hover:bg-[#3367D6] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>Se connecter avec cette adresse</span>
+              </button>
+            </form>
+
             <button
               type="button"
               onClick={() => setShowGoogleEmailInput(false)}
               className="w-full text-center text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer pt-1"
             >
-              Retour au formulaire classique
+              ← Retour au formulaire classique
             </button>
-          </form>
+          </div>
         ) : (
           /* FORMULAIRE CLASSIQUE */
           <form onSubmit={handleSubmit} className="space-y-3.5">

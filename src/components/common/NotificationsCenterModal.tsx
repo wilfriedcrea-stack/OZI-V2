@@ -109,20 +109,37 @@ export const NotificationsCenterModal: React.FC<NotificationsCenterModalProps> =
           </button>
         </div>
 
-        {/* BANNIÈRE PERMISSION PUSH */}
-        <div className="p-3 bg-gradient-to-r from-[#ff5a50]/15 to-purple-500/15 border border-[#ff5a50]/30 rounded-2xl flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs">
-            <ShieldCheck className="w-4 h-4 text-[#ff5a50] shrink-0" />
-            <div className="text-[11px] text-slate-200 leading-tight">
-              <strong>Ne ratez aucun épisode :</strong> activez les alertes directes.
+        {/* BANNIÈRE PERMISSION PUSH & TEST HORS APPLI */}
+        <div className="p-3 bg-gradient-to-br from-[#ff5a50]/15 via-[#1b1726] to-purple-500/15 border border-[#ff5a50]/30 rounded-2xl space-y-2 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs">
+              <ShieldCheck className="w-4 h-4 text-[#ff5a50] shrink-0" />
+              <div className="text-[11px] text-slate-200 leading-tight">
+                <strong>Alertes hors appli :</strong> reçues sur écran de verrouillage et volet Android.
+              </div>
             </div>
+            <button
+              onClick={handleRequestPushPermission}
+              className="px-3 py-1.5 bg-[#ff5a50] hover:bg-[#ff463b] text-white font-black rounded-full text-[11px] shrink-0 cursor-pointer shadow-md transition-all tap-active active:scale-95"
+            >
+              Activer
+            </button>
           </div>
-          <button
-            onClick={handleRequestPushPermission}
-            className="px-3 py-1.5 bg-[#ff5a50] hover:bg-[#ff463b] text-white font-black rounded-xl text-[11px] shrink-0 cursor-pointer shadow-md transition-all tap-active"
-          >
-            Activer
-          </button>
+
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
+            <span className="text-slate-400">Vérifier sur cet appareil :</span>
+            <button
+              type="button"
+              onClick={async () => {
+                showToast('Notification programmée dans 4s ! Verrouillez ou quittez l\'appli pour voir.', 'info');
+                await notificationService.sendTestExternalNotification(4);
+              }}
+              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white rounded-full font-bold transition-all cursor-pointer tap-active flex items-center gap-1"
+            >
+              <Sparkles className="w-3 h-3 text-[#ff5a50]" />
+              <span>Tester hors appli (4s)</span>
+            </button>
+          </div>
         </div>
 
         {/* ACTIONS RAPIDES (Tout marquer comme lu / Effacer) */}

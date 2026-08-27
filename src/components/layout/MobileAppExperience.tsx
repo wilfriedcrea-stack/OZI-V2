@@ -9,6 +9,8 @@ import {
   Flame,
   ChevronRight,
   BookOpen,
+  Home,
+  Library,
   Gamepad2,
   Newspaper,
   User,
@@ -21,6 +23,7 @@ import {
   Compass,
   Eye,
   Bell,
+  Settings,
 } from 'lucide-react';
 import { OziLogo } from '../common/OziLogo';
 import { WorkDetailView } from '../app/WorkDetailView';
@@ -37,6 +40,7 @@ import { ShopDrawer, CartItem } from '../shop/ShopDrawer';
 import { CoinShopModal } from '../shop/CoinShopModal';
 import { PlayableGameModal } from '../games/PlayableGameModal';
 import { NotificationsCenterModal } from '../common/NotificationsCenterModal';
+import { SearchModal } from '../app/SearchModal';
 import { notificationService } from '../../lib/notificationService';
 import { Game } from '../../types';
 
@@ -87,6 +91,13 @@ export const MobileAppExperience: React.FC = () => {
       unsub();
     };
   }, []);
+
+  // Réinitialiser le défilement en haut de page lors d'un changement de vue ou d'onglet
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [activeView, activeTab]);
 
   // Panier e-commerce (vide par défaut pour une interface épurée sans badge rouge parasite)
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -300,103 +311,69 @@ export const MobileAppExperience: React.FC = () => {
         
         {/* ========================================================================= */}
         {/* 1. TOP NAVBAR MOBILE TACTILE HAUTE QUALITÉ */}
-        {/* Disposition symétrique : [Gauche: Coins] — [Centre: Logo OZI] — [Droite: Recherche + Boutique] */}
+        {/* Disposition ergonomique : [Gauche: Menu 3 barres] — [Centre: Grand Logo OZI] — [Droite: Notifications + Paramètres] */}
         {/* ========================================================================= */}
-        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-xl px-4 pb-3 safe-header grid grid-cols-3 items-center border-b border-white/10 shadow-sm">
-          {/* ZONE GAUCHE : Solde des Pièces & Rechargement */}
+        <header className="sticky top-0 z-30 bg-[#0d0e15]/95 backdrop-blur-xl px-4 py-2.5 safe-header flex items-center justify-between border-b border-white/10 shadow-sm">
+          {/* ZONE GAUCHE : Bouton Menu 3 barres */}
           <div className="flex items-center justify-start">
             <button
-              onClick={() => openCoinShop()}
-              className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 rounded-full text-amber-300 text-xs font-black flex items-center gap-1.5 cursor-pointer tap-active transition-all"
-              title="Recharger des Pièces OZI"
+              onClick={() => setIsDrawerOpen(true)}
+              className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 text-slate-200 hover:text-white flex items-center justify-center transition-all cursor-pointer relative tap-active active:scale-90 border border-white/5"
+              aria-label="Menu principal"
+              title="Ouvrir le menu principal"
             >
-              <Coins className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="font-mono">{currentUser?.coinsBalance || 0}</span>
-              <span className="text-[10px] text-amber-400 font-bold hidden xs:inline">🪙</span>
+              <Menu className="w-5 h-5 stroke-[2.4]" />
             </button>
           </div>
 
-          {/* ZONE CENTRALE : Logo OZI parfaitement centré */}
-          <div className="flex items-center justify-center">
-            <div
-              onClick={() => {
-                setActiveTab('home');
-                setActiveView('app_catalogue');
-              }}
-              className="cursor-pointer tap-active py-0.5 inline-block"
-              title="Accueil OZI"
-            >
-              <OziLogo size="md" />
-            </div>
+          {/* ZONE CENTRALE : Grand Logo OZI */}
+          <div
+            onClick={() => {
+              setActiveTab('home');
+              setActiveView('app_catalogue');
+            }}
+            className="cursor-pointer tap-active py-0.5 flex items-center justify-center"
+            title="Accueil OZI"
+          >
+            <OziLogo size="md" />
           </div>
 
-          {/* ZONE DROITE : Notifications + Recherche + Boutique avec icônes fluides sans carré d'arrière-plan */}
+          {/* ZONE DROITE : Notifications & Paramètres */}
           <div className="flex items-center justify-end gap-1.5">
+            {/* Bouton Notifications */}
             <button
               onClick={() => setIsNotificationsOpen(true)}
-              className="text-slate-300 hover:text-white p-1.5 transition-colors cursor-pointer relative tap-active"
+              className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer relative tap-active active:scale-90 border border-white/5"
               aria-label="Notifications"
               title="Centre de notifications"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5 text-slate-200" />
               {unreadNotifsCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ff5a50] text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-[#ff5a50]/40">
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#ff5a50] text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-[#ff5a50]/50 border border-[#0d0e15]">
                   {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
                 </span>
               )}
             </button>
 
+            {/* Bouton Paramètres & Profil */}
             <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`p-1.5 transition-colors cursor-pointer tap-active ${
-                isSearchOpen ? 'text-[#ff5a50]' : 'text-slate-300 hover:text-white'
-              }`}
-              aria-label="Recherche"
-              title="Rechercher une série"
+              onClick={() => setIsDrawerOpen(true)}
+              className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer relative tap-active active:scale-90 border border-white/5"
+              aria-label="Paramètres et Profil"
+              title="Paramètres de l'application et profil"
             >
-              <Search className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => setIsShopOpen(true)}
-              className="text-slate-300 hover:text-white p-1.5 transition-colors cursor-pointer relative tap-active"
-              aria-label="Boutique"
-              title="Boutique & Goodies"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#ff5a50] text-white text-[9px] font-black flex items-center justify-center shadow-lg">
-                  {cart.reduce((a, b) => a + b.quantity, 0)}
-                </span>
+              {currentUser?.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.username}
+                  className="w-7 h-7 rounded-full object-cover border border-[#ff5a50]"
+                />
+              ) : (
+                <Settings className="w-5 h-5 text-slate-200" />
               )}
             </button>
           </div>
         </header>
-
-        {/* Barre de recherche dépliable tactile */}
-        {isSearchOpen && (
-          <div className="p-3 bg-[#131422] border-b border-white/10 animate-in slide-in-from-top-2 duration-150">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Rechercher une série, un auteur, un genre..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                className="w-full bg-[#1c1e2e] border border-white/15 text-white text-xs pl-9 pr-4 py-3 rounded-2xl focus:outline-none focus:border-[#ff5a50] shadow-inner"
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-3 text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-slate-300"
-                >
-                  Effacer
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* ========================================================================= */}
         {/* 2. CONTENU PRINCIPAL PAR ONGLET */}
@@ -428,7 +405,7 @@ export const MobileAppExperience: React.FC = () => {
               {/* CARTE HERO BANNIÈRE (Hauteur réduite et plus compacte) */}
               <div
                 onClick={() => openWorkDetail(featuredWork.id)}
-                className="relative mx-3.5 h-64 sm:h-72 overflow-hidden shadow-2xl cursor-pointer group tap-active"
+                className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
               >
                 <img
                   src={featuredWork.coverUrl}
@@ -574,7 +551,7 @@ export const MobileAppExperience: React.FC = () => {
                         </button>
                       </div>
                       <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate font-almodobar tracking-wide">{work.title}</h4>
+                        <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
                         <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
                           <span className="flex items-center gap-0.5 text-amber-400 font-bold">
                             <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
@@ -641,7 +618,7 @@ export const MobileAppExperience: React.FC = () => {
                         </button>
                       </div>
                       <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate font-almodobar tracking-wide">{work.title}</h4>
+                        <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
                         <p className="text-[10px] text-slate-400 truncate mt-0.5">
                           {work.genres.join(' • ')}
                         </p>
@@ -778,40 +755,42 @@ export const MobileAppExperience: React.FC = () => {
         </main>
 
         {/* ========================================================================= */}
+        {/* BOUTON FLOTTANT DE RECHERCHE (FAB) EN BAS À DROITE AU-DESSUS DES 3 ICÔNES */}
+        {/* ========================================================================= */}
+        <div className="fixed bottom-[86px] left-0 right-0 z-30 max-w-md mx-auto pointer-events-none px-4 flex justify-end">
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="pointer-events-auto w-13 h-13 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white border border-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center justify-center cursor-pointer tap-active transition-all duration-200 group ring-4 ring-black/20"
+            aria-label="Rechercher des titres"
+            title="Rechercher des titres"
+          >
+            <Search className="w-6 h-6 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
+          </button>
+        </div>
+
+        {/* ========================================================================= */}
         {/* 3. BARRE D'ONGLETS INFÉRIEURE ULTRA-ERGONOMIQUE */}
         {/* ========================================================================= */}
-        <nav className="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto bg-[#0d0e15]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-2 flex items-center justify-around shadow-2xl">
+        <nav className="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto bg-[#0d0e15]/95 backdrop-blur-2xl border-t border-white/10 px-4 py-2 flex items-center justify-around shadow-2xl">
           {/* Onglet Accueil */}
           <button
             onClick={() => {
               setActiveTab('home');
               setActiveView('app_catalogue');
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all cursor-pointer tap-active ${
+            className={`flex flex-col items-center gap-1 py-1 px-5 rounded-2xl transition-all cursor-pointer tap-active ${
               activeTab === 'home' ? 'text-[#ff5a50]' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <BookOpen className={`w-5 h-5 ${activeTab === 'home' ? 'stroke-[2.5]' : ''}`} />
+            <Home className={`w-5 h-5 ${activeTab === 'home' ? 'stroke-[2.5]' : ''}`} />
             <span className="text-[10px] font-bold">Accueil</span>
             {activeTab === 'home' && <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a50] shadow-sm shadow-[#ff5a50]" />}
-          </button>
-
-          {/* Onglet Bibliothèque */}
-          <button
-            onClick={() => setActiveTab('library')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all cursor-pointer tap-active ${
-              activeTab === 'library' ? 'text-[#ff5a50]' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Bookmark className={`w-5 h-5 ${activeTab === 'library' ? 'stroke-[2.5]' : ''}`} />
-            <span className="text-[10px] font-bold">Bibliothèque</span>
-            {activeTab === 'library' && <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a50] shadow-sm shadow-[#ff5a50]" />}
           </button>
 
           {/* Onglet Jeux */}
           <button
             onClick={() => setActiveTab('games')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all cursor-pointer tap-active ${
+            className={`flex flex-col items-center gap-1 py-1 px-5 rounded-2xl transition-all cursor-pointer tap-active ${
               activeTab === 'games' ? 'text-[#ff5a50]' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -828,25 +807,13 @@ export const MobileAppExperience: React.FC = () => {
                 setActiveView('app_catalogue');
               }
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all cursor-pointer tap-active ${
+            className={`flex flex-col items-center gap-1 py-1 px-5 rounded-2xl transition-all cursor-pointer tap-active ${
               activeTab === 'blog' ? 'text-[#ff5a50]' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Newspaper className={`w-5 h-5 ${activeTab === 'blog' ? 'stroke-[2.5]' : ''}`} />
             <span className="text-[10px] font-bold">Actus</span>
             {activeTab === 'blog' && <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a50] shadow-sm shadow-[#ff5a50]" />}
-          </button>
-
-          {/* Onglet Profil */}
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all cursor-pointer tap-active ${
-              activeTab === 'profile' ? 'text-[#ff5a50]' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <User className={`w-5 h-5 ${activeTab === 'profile' ? 'stroke-[2.5]' : ''}`} />
-            <span className="text-[10px] font-bold">Profil</span>
-            {activeTab === 'profile' && <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a50] shadow-sm shadow-[#ff5a50]" />}
           </button>
         </nav>
 
@@ -857,6 +824,12 @@ export const MobileAppExperience: React.FC = () => {
           onSelectTab={(tab) => setActiveTab(tab)}
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenShop={() => setIsShopOpen(true)}
+        />
+
+        {/* Modale de Recherche Rapide */}
+        <SearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
         />
 
         {/* Shop Cart Drawer */}

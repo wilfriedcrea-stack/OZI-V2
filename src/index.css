@@ -17,25 +17,10 @@
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
   }
 
-  /* Style Moderne : suppression des angles durs sur les pastilles, badges, icônes rondes et avatars */
-  *:not(.avatar-round):not(.avatar-round *):not(.rounded-pill):not(.rounded-pill *):not(.rounded-full):not(.rounded-full *) {
-    border-radius: 0px !important;
-  }
-
+  /* Styles utilitaires globaux */
   .avatar-round,
-  .rounded-pill,
-  .rounded-full {
+  .rounded-pill {
     border-radius: 9999px !important;
-  }
-
-  /* Style épuré : suppression des contours/bordures excessifs sur les cartes et conteneurs */
-  .border-white\/10,
-  .border-white\/5,
-  .border-slate-800,
-  .border-slate-800\/80,
-  .border-slate-700,
-  .border-slate-700\/80 {
-    border-color: transparent !important;
   }
 
   html {

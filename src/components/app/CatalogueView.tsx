@@ -140,12 +140,12 @@ export const CatalogueView: React.FC = () => {
       <div className="space-y-4">
         {/* Format Selector Pills */}
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl">
+          <div className="flex items-center gap-1.5 p-1.5 bg-slate-900/90 border border-slate-800/80 rounded-full backdrop-blur-md">
             <button
               onClick={() => setSelectedType('all')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-active ${
                 selectedType === 'all'
-                  ? 'bg-amber-500 text-black shadow'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -153,9 +153,9 @@ export const CatalogueView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedType('webtoon')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-active ${
                 selectedType === 'webtoon'
-                  ? 'bg-amber-500 text-black shadow'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -163,9 +163,9 @@ export const CatalogueView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedType('manga')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-active ${
                 selectedType === 'manga'
-                  ? 'bg-amber-500 text-black shadow'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -173,9 +173,9 @@ export const CatalogueView: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedType('bd')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-active ${
                 selectedType === 'bd'
-                  ? 'bg-amber-500 text-black shadow'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -188,7 +188,7 @@ export const CatalogueView: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e: any) => setSortBy(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500 cursor-pointer"
+              className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm"
             >
               <option value="popular">🔥 Plus populaires</option>
               <option value="rating">⭐ Mieux notés</option>
@@ -205,9 +205,9 @@ export const CatalogueView: React.FC = () => {
           </span>
           <button
             onClick={() => setSelectedGenre('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer tap-active ${
               selectedGenre === 'all'
-                ? 'bg-slate-700 text-white'
+                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                 : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -217,9 +217,9 @@ export const CatalogueView: React.FC = () => {
             <button
               key={genre}
               onClick={() => setSelectedGenre(genre)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer tap-active ${
                 selectedGenre === genre
-                  ? 'bg-amber-500/20 border border-amber-500 text-amber-300 font-semibold'
+                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >

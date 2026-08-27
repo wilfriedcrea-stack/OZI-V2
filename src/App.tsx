@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOzi } from './context/OziContext';
 import { MobileAppExperience } from './components/layout/MobileAppExperience';
 import { ReaderView } from './components/app/ReaderView';
+import { StandaloneAdminPortal } from './components/admin/StandaloneAdminPortal';
 import { CommentsModal } from './components/app/CommentsModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { CoinShopModal } from './components/shop/CoinShopModal';
@@ -22,6 +23,42 @@ export function App() {
   } = useOzi();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+
+  // Détection si l'utilisateur ouvre directement la page web d'administration (ex: /admin, ?admin=true, #admin)
+  const [isStandaloneAdminRoute, setIsStandaloneAdminRoute] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      return (
+        pathname.includes('/admin') ||
+        search.includes('view=admin') ||
+        search.includes('admin=true') ||
+        hash.includes('admin')
+      );
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathname = window.location.pathname.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      setIsStandaloneAdminRoute(
+        pathname.includes('/admin') ||
+        search.includes('view=admin') ||
+        search.includes('admin=true') ||
+        hash.includes('admin')
+      );
+    };
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
 
   // Initialisation des fonctionnalités natives Android (Status bar, Splash, Hardware Back Button)
   useCapacitorInit(() => {
@@ -53,6 +90,34 @@ export function App() {
     return false;
   });
 
+  // Si on est dans la page web dédiée d'administration
+  if (isStandaloneAdminRoute || activeView === 'admin_dashboard') {
+    return (
+      <div className="min-h-screen bg-[#07080c] text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#ff5a50] selection:text-white">
+        {/* Toast Notification */}
+        {toast && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-200">
+            <div
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl border text-xs font-semibold backdrop-blur-md ${
+                toast.type === 'success'
+                  ? 'bg-emerald-950/95 text-emerald-200 border-emerald-500/50'
+                  : toast.type === 'error'
+                  ? 'bg-red-950/95 text-red-200 border-red-500/50'
+                  : 'bg-amber-950/95 text-amber-200 border-amber-500/50'
+              }`}
+            >
+              {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+              {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />}
+              {toast.type === 'info' && <Info className="w-4 h-4 text-amber-400 shrink-0" />}
+              <span>{toast.text}</span>
+            </div>
+          </div>
+        )}
+        <StandaloneAdminPortal />
+      </div>
+    );
+  }
+
   // Si on est dans le lecteur, mode plein écran direct
   const isReaderView = activeView === 'app_reader';
 
@@ -78,7 +143,7 @@ export function App() {
         </div>
       )}
 
-      {/* VUE PRINCIPALE */}
+      {/* VUE PRINCIPALE MOBILE / WEB APP */}
       {isReaderView ? (
         <div className="flex-1 w-full min-h-screen bg-[#07080c]">
           <ReaderView />

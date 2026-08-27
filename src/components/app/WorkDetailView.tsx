@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOzi } from '../../context/OziContext';
 import {
   ArrowLeft,
@@ -40,6 +40,15 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
     isChapterUnlocked,
     currentUser,
   } = useOzi();
+
+  // Forcer le retour en haut de la page dès l'ouverture de la fiche œuvre
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [currentWork?.id]);
 
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const [sortAscending, setSortAscending] = useState(false);

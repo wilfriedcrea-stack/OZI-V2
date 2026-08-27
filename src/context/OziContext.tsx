@@ -257,7 +257,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const role = isWilfriedAdmin(email) ? 'admin' : 'user';
 
         try {
-          const userDoc = await (await import('firebase/firestore')).getDoc(userDocRef);
+          const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const data = userDoc.data() as User;
             const updated = {
@@ -368,6 +368,29 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Firestore subscription fallback:', e);
     }
+  }, []);
+
+  // Notifications OS & Clics hors de l'application
+  useEffect(() => {
+    notificationService.ensureChannels();
+    notificationService.scheduleDailyReminder(24);
+
+    const unbindClick = notificationService.registerClickHandler((data) => {
+      if (data?.workId && data?.chapterId) {
+        setSelectedWorkId(data.workId);
+        setSelectedChapterId(data.chapterId);
+        setActiveView('app_reader');
+      } else if (data?.workId) {
+        setSelectedWorkId(data.workId);
+        setActiveView('app_work_detail');
+      } else if (data?.test) {
+        showToast('Notification hors appli reçue avec succès ! 🚀', 'success');
+      }
+    });
+
+    return () => {
+      unbindClick();
+    };
   }, []);
 
   // Sync to localStorage
@@ -496,7 +519,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dislikedChapters: [],
         likedComments: [],
         readHistory: [],
-        coinsBalance: 100,
+        coinsBalance: role === 'admin' ? 5000 : 200,
         unlockedChapters: [],
         isSuspended: false,
         createdAt: new Date().toISOString(),
@@ -518,11 +541,11 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`Connecté avec Google (${userObj.username})`, 'success');
       return { success: true, message: 'Connexion Google réussie.' };
     } catch (err: any) {
-      console.warn('Firebase signInWithPopup:', err);
-      // Si la popup Firebase échoue (ex: authDomain invalide ou iframe), proposer connexion Google directe
+      console.warn('Firebase signInWithPopup notice:', err?.code || err?.message);
+      // Si la popup Firebase est bloquée ou non supportée (ex: environnement mobile/WebView ou domaine preview)
       return { 
         success: false, 
-        message: "L'authentification Google via popup a été bloquée par le navigateur. Vous pouvez vous connecter avec votre adresse Google dans le formulaire.",
+        message: "Sélectionnez votre compte Google pour continuer.",
         needsDirectGoogle: true
       };
     }
@@ -535,11 +558,12 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const role = isWilfriedAdmin(cleanEmail) ? 'admin' : 'user';
     const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    const displayName = googleName || (cleanEmail === 'wilfriedcrea@gmail.com' ? 'Wilfried (Créateur)' : cleanEmail.split('@')[0]);
     
-    const userObj: User = existing || {
-      id: `google-user-${Date.now()}`,
+    const userObj: User = existing ? { ...existing, role } : {
+      id: `google-${cleanEmail.replace(/[^a-z0-9]/gi, '_')}`,
       email: cleanEmail,
-      username: googleName || cleanEmail.split('@')[0] || 'Lecteur OZI',
+      username: displayName,
       avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
       role: role,
       bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Lecteur Google sur OZI Webtoons',
@@ -550,7 +574,8 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       readHistory: [],
       isSuspended: false,
       createdAt: new Date().toISOString(),
-      coinsBalance: 200,
+      coinsBalance: role === 'admin' ? 5000 : 200,
+      unlockedChapters: [],
     };
 
     try {
@@ -559,7 +584,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Firestore setDoc fallback', e);
     }
 
-    setUsers((prev) => (prev.some((u) => u.id === userObj.id) ? prev : [...prev, userObj]));
+    setUsers((prev) => (prev.some((u) => u.id === userObj.id) ? prev.map((u) => (u.id === userObj.id ? userObj : u)) : [...prev, userObj]));
     setCurrentUser(userObj);
     showToast(`Connecté avec succès en tant que ${userObj.username} !`, 'success');
     return { success: true, message: 'Connexion Google réussie.' };
@@ -575,10 +600,16 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanEmail = email.trim().toLowerCase();
     const cleanUsername = username.trim();
 
+    // Validation du format d'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return { success: false, message: 'Veuillez saisir une adresse email valide.' };
+    }
+
     // Vérifier si un compte existe déjà localement
     const exists = users.some((u) => u.email.toLowerCase() === cleanEmail);
     if (exists) {
-      return { success: false, message: 'Un compte existe déjà avec cette adresse email.' };
+      return { success: false, message: 'Un compte existe déjà avec cette adresse email. Veuillez vous connecter.' };
     }
 
     let userId = `user-${Date.now()}`;
@@ -591,20 +622,27 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await updateFirebaseProfile(firebaseUser, { displayName: cleanUsername });
       } catch (e) {
-        // Ignorer si profile update non critique
+        // Profil update non-bloquant
       }
     } catch (err: any) {
-      console.warn('Firebase createUser fallback:', err);
+      console.warn('Firebase createUser note:', err?.code || err?.message);
       if (err?.code === 'auth/email-already-in-use') {
-        return { success: false, message: 'Un compte existe déjà avec cette adresse email.' };
+        return { success: false, message: 'Un compte existe déjà avec cette adresse email. Veuillez vous connecter.' };
       }
+      if (err?.code === 'auth/weak-password') {
+        return { success: false, message: 'Le mot de passe doit comporter au moins 6 caractères.' };
+      }
+      if (err?.code === 'auth/invalid-email') {
+        return { success: false, message: 'L\'adresse email saisie est invalide.' };
+      }
+      // En cas de restriction Firebase ou mode hors ligne, on continue la création locale transparente
     }
 
     const newUser: User = {
       id: userId,
       email: cleanEmail,
       username: cleanUsername,
-      avatar: `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80`,
       role: role,
       bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Nouveau lecteur passionné sur OZI !',
       bookmarks: [],
@@ -612,7 +650,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dislikedChapters: [],
       likedComments: [],
       readHistory: [],
-      coinsBalance: 150,
+      coinsBalance: role === 'admin' ? 5000 : 200,
       unlockedChapters: [],
       isSuspended: false,
       createdAt: new Date().toISOString(),
@@ -624,7 +662,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Doc set fallback:', e);
     }
 
-    setUsers((prev) => [...prev, newUser]);
+    setUsers((prev) => (prev.some((u) => u.email === newUser.email) ? prev : [...prev, newUser]));
     setCurrentUser(newUser);
     showToast(`Compte créé avec succès ! Bienvenue ${cleanUsername}.`, 'success');
     return { success: true, message: 'Compte créé avec succès.' };
@@ -1235,7 +1273,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Vous avez été désabonné de la newsletter.', 'info');
   };
 
-  // Navigation helpers avec incrément atomique
+  // Navigation helpers avec incrément atomique et retour immédiat au début
   const openWorkDetail = (workId: string) => {
     setSelectedWorkId(workId);
     setWorks((prev) => prev.map((w) => (w.id === workId ? { ...w, views: w.views + 1 } : w)));
@@ -1243,6 +1281,9 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateDoc(doc(db, 'works', workId), { views: increment(1) });
     } catch (e) {}
     setActiveView('app_work_detail');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const openReader = (workId: string, chapterId: string) => {
@@ -1255,17 +1296,26 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateDoc(doc(db, 'chapters', chapterId), { viewsCount: increment(1) });
     } catch (e) {}
     setActiveView('app_reader');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const openGame = (gameId: string) => {
     setSelectedGameId(gameId);
     incrementGamePlays(gameId);
     setActiveView('app_games');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const openArticle = (articleId: string) => {
     setSelectedArticleId(articleId);
     setActiveView('app_articles');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   // Monetization & Coins Helpers
