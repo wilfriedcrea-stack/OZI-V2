@@ -2,7 +2,7 @@ import { ref, uploadBytesResumable, getDownloadURL, uploadString } from 'firebas
 import { storage } from './firebase';
 
 /**
- * Helper d'upload vers Firebase Storage & Google Cloud Storage
+ * Helper d'upload vers Serveur LWS (PHP) & Firebase Storage
  * avec compression WebP client, fallback Base64 / Blob et progression temps-réel.
  */
 
@@ -12,6 +12,7 @@ export interface UploadedImageResult {
   size: number;
   type: string;
   storagePath?: string;
+  source?: 'lws' | 'firebase' | 'base64';
 }
 
 /**
@@ -35,11 +36,17 @@ export const fileToDataUrl = (file: File): Promise<string> => {
  */
 export const compressImageFile = (
   file: File,
-  maxWidth: number = 1200,
-  maxHeight: number = 2400,
-  quality: number = 0.85
+  maxWidth: number = 1400,
+  maxHeight: number = 2800,
+  quality: number = 0.88
 ): Promise<{ dataUrl: string; blob: Blob }> => {
   return new Promise((resolve, reject) => {
+    // Si c'est un SVG ou un fichier audio, pas de compression canvas
+    if (file.type === 'image/svg+xml' || file.type.startsWith('audio/')) {
+      resolve({ dataUrl: '', blob: file });
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
@@ -70,7 +77,7 @@ export const compressImageFile = (
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Exporter en WebP si supporté ou JPEG
+        // Exporter en WebP
         const compressedDataUrl =
           canvas.toDataURL('image/webp', quality) || canvas.toDataURL('image/jpeg', quality);
 
@@ -92,14 +99,87 @@ export const compressImageFile = (
 };
 
 /**
- * Upload d'une image vers Firebase Storage avec fallback instantané
+ * Upload d'un fichier vers le serveur LWS via /api/upload.php
+ */
+export const uploadToLwsServer = async (
+  file: Blob | File,
+  fileName: string,
+  folder: string = 'general',
+  onProgress?: (progress: number) => void
+): Promise<UploadedImageResult | null> => {
+  const endpoints = [
+    '/api/upload.php',
+    'https://ozibd.net/api/upload.php'
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file, fileName);
+      formData.append('folder', folder);
+
+      const xhr = new XMLHttpRequest();
+      
+      const uploadPromise = new Promise<{ success: boolean; url: string; size?: number }>((resolve, reject) => {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable && onProgress) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              if (res.success && res.url) {
+                resolve(res);
+              } else {
+                reject(new Error(res.error || 'Erreur serveur PHP LWS'));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          } else {
+            reject(new Error(`HTTP ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.ontimeout = () => reject(new Error('Timeout'));
+        xhr.open('POST', endpoint, true);
+        xhr.timeout = 30000; // 30s timeout
+        xhr.send(formData);
+      });
+
+      const response = await uploadPromise;
+      if (response && response.url) {
+        return {
+          url: response.url,
+          name: fileName,
+          size: file.size,
+          type: file.type || 'image/webp',
+          storagePath: `uploads/${folder}/${fileName}`,
+          source: 'lws'
+        };
+      }
+    } catch (err) {
+      console.warn(`Tentative d'upload LWS sur ${endpoint} non aboutie (mode local ou hors ligne):`, err);
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Upload d'une image : priorité au serveur LWS, fallback Firebase Storage & Base64
  * @param file Le fichier image
- * @param folder Le dossier cible (ex: 'covers', 'banners', 'webtoons/work-1/ch-1')
+ * @param folder Le dossier cible (ex: 'covers', 'banners', 'chapters')
  * @param onProgress Callback de progression (0 à 100%)
  */
 export const uploadImageToStorage = async (
   file: File,
-  folder: string = 'uploads',
+  folder: string = 'covers',
   onProgress?: (progress: number) => void
 ): Promise<UploadedImageResult> => {
   const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -108,21 +188,29 @@ export const uploadImageToStorage = async (
 
   try {
     // 1. Optimisation préalable
-    const { dataUrl, blob } = await compressImageFile(file, 1400, 3200, 0.88);
+    const { dataUrl, blob } = await compressImageFile(file, 1400, 2800, 0.88);
+    const finalBlob = blob || file;
 
-    // 2. Tentative d'upload vers Firebase Storage
+    // 2. PRIORITÉ : Tentative d'upload direct sur le serveur LWS (htdocs/uploads/...)
+    const lwsResult = await uploadToLwsServer(finalBlob, cleanName, folder, onProgress);
+    if (lwsResult) {
+      console.log('✅ Image stockée sur le serveur LWS :', lwsResult.url);
+      return lwsResult;
+    }
+
+    // 3. Fallback : Firebase Storage (si configuré)
     if (storage) {
-      const storageRef = ref(storage, storagePath);
-      const metadata = {
-        contentType: blob.type || 'image/webp',
-        customMetadata: {
-          originalName: file.name,
-          uploadedAt: new Date().toISOString(),
-        },
-      };
-
       try {
-        const uploadTask = uploadBytesResumable(storageRef, blob, metadata);
+        const storageRef = ref(storage, storagePath);
+        const metadata = {
+          contentType: finalBlob.type || 'image/webp',
+          customMetadata: {
+            originalName: file.name,
+            uploadedAt: new Date().toISOString(),
+          },
+        };
+
+        const uploadTask = uploadBytesResumable(storageRef, finalBlob, metadata);
 
         const downloadUrl = await new Promise<string>((resolve, reject) => {
           uploadTask.on(
@@ -132,7 +220,7 @@ export const uploadImageToStorage = async (
               if (onProgress) onProgress(Math.round(progress));
             },
             (error) => {
-              console.warn('Firebase Storage upload warning, using fast direct URL:', error);
+              console.warn('Firebase Storage fallback warning:', error);
               reject(error);
             },
             async () => {
@@ -145,27 +233,23 @@ export const uploadImageToStorage = async (
         return {
           url: downloadUrl,
           name: file.name,
-          size: blob.size,
-          type: blob.type || 'image/webp',
+          size: finalBlob.size,
+          type: finalBlob.type || 'image/webp',
           storagePath,
+          source: 'firebase'
         };
       } catch (storageError) {
-        console.warn('Fallback direct Cloud CDN URL:', storageError);
-        // Fallback transparent vers dataUrl optimisée
-        return {
-          url: dataUrl,
-          name: file.name,
-          size: blob.size,
-          type: 'image/webp',
-        };
+        console.warn('Utilisation du fallback Data URL optimisé:', storageError);
       }
     }
 
+    // 4. Fallback ultime instantané : Data URL base64 compressée
     return {
-      url: dataUrl,
+      url: dataUrl || (await fileToDataUrl(file)),
       name: file.name,
-      size: blob.size,
-      type: 'image/webp',
+      size: finalBlob.size,
+      type: finalBlob.type || 'image/webp',
+      source: 'base64'
     };
   } catch (err) {
     console.error('Upload image processing error:', err);
@@ -175,6 +259,7 @@ export const uploadImageToStorage = async (
       name: file.name,
       size: file.size,
       type: file.type,
+      source: 'base64'
     };
   }
 };
@@ -193,7 +278,7 @@ export const processBatchImages = async (
   );
 
   const results: UploadedImageResult[] = [];
-  const folder = workId && chapterNumber ? `webtoons/${workId}/ch_${chapterNumber}` : 'webtoons/general';
+  const folder = workId && chapterNumber ? `chapters/${workId}/ch_${chapterNumber}` : 'chapters/general';
 
   for (let i = 0; i < fileArray.length; i++) {
     const file = fileArray[i];
@@ -210,6 +295,7 @@ export const processBatchImages = async (
         name: file.name,
         size: file.size,
         type: file.type,
+        source: 'base64'
       });
     }
 

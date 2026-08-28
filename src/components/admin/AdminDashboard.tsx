@@ -461,6 +461,65 @@ export const AdminDashboard: React.FC = () => {
   // Flagged comments count
   const flaggedComments = comments.filter((c) => c.isReported);
 
+  // LWS Package Downloader
+  const [isDownloadingLwsZip, setIsDownloadingLwsZip] = useState(false);
+
+  const handleDownloadLwsZip = async () => {
+    setIsDownloadingLwsZip(true);
+    try {
+      const response = await fetch('/ozi-lws-dist.zip');
+      if (!response.ok) throw new Error('Fichier non trouvé');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ozi-lws-dist.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+      showToast('Téléchargement du ZIP LWS lancé avec succès !', 'success');
+    } catch (err) {
+      console.error(err);
+      // Fallback direct link trigger
+      const a = document.createElement('a');
+      a.href = '/ozi-lws-dist.zip';
+      a.setAttribute('download', 'ozi-lws-dist.zip');
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Tentative de téléchargement direct...', 'info');
+    } finally {
+      setIsDownloadingLwsZip(false);
+    }
+  };
+
+  const handleDownloadHtaccess = () => {
+    const htaccessContent = `<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Compression GZIP
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+</IfModule>`;
+    const blob = new Blob([htaccessContent], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '.htaccess';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Fichier .htaccess téléchargé !', 'success');
+  };
+
   return (
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
       {/* TOP ADMIN HEADER */}
@@ -478,7 +537,20 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleDownloadLwsZip}
+            disabled={isDownloadingLwsZip}
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+          >
+            {isDownloadingLwsZip ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>Télécharger pack LWS (ZIP)</span>
+          </button>
+
           <button
             onClick={() => setActiveView('app_catalogue')}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 rounded-xl transition-colors cursor-pointer"
@@ -654,6 +726,61 @@ export const AdminDashboard: React.FC = () => {
                   <div className="text-[10px] text-slate-400">Carnet de création & news</div>
                 </div>
               </button>
+            </div>
+          </div>
+
+          {/* LWS DEPLOYMENT GUIDE & DIRECT DOWNLOAD CARD */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-900/90 to-amber-950/30 border border-amber-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Mise en Ligne & Stockage Médias LWS (ozibd.net)
+                </div>
+                <h3 className="text-xl font-black text-white font-['Outfit',sans-serif]">
+                  Pack Complet LWS & Stockage Automatique des Œuvres
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Toutes vos futures œuvres, couvertures et planches importées depuis ce panneau sont <strong className="text-amber-400">automatiquement stockées sur votre hébergement LWS</strong> dans <code className="text-amber-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">htdocs/uploads/</code> via le script PHP sécurisé inclus.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-2 bg-slate-950/50 px-3 py-2 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center text-[10px]">1</span>
+                    <span>Télécharger le ZIP</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-950/50 px-3 py-2 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center text-[10px]">2</span>
+                    <span>Envoyer dans <strong>htdocs</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-950/50 px-3 py-2 rounded-xl border border-slate-800">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center text-[10px]">3</span>
+                    <span>Extraire & C'est Prêt !</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row md:flex-col gap-3 w-full md:w-auto shrink-0">
+                <button
+                  onClick={handleDownloadLwsZip}
+                  disabled={isDownloadingLwsZip}
+                  className="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black text-xs rounded-2xl shadow-xl shadow-orange-500/25 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+                >
+                  {isDownloadingLwsZip ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span>Télécharger ozi-lws-dist.zip</span>
+                </button>
+
+                <button
+                  onClick={handleDownloadHtaccess}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Télécharger .htaccess seul</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

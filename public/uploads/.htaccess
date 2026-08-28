@@ -1,0 +1,12 @@
+# Sécurité du dossier uploads OZI
+# Empêche l'exécution de scripts PHP malveillants dans uploads mais autorise l'accès direct aux images/sons
+<FilesMatch "\.(php|phtml|php3|php4|php5|phps|cgi|pl|py)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Autoriser l'accès CORS pour le lecteur et l'application
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "max-age=31536000, public"
+</IfModule>
