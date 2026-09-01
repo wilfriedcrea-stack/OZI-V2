@@ -50,6 +50,47 @@ jobs:
         run: |
           npx cap sync android
 
+      - name: 🎨 Générer et injecter l'icône OZI officielle
+        run: |
+          # Télécharger ou utiliser iconapp.png
+          if [ ! -f "public/iconapp.png" ]; then
+            curl -s -L -o public/iconapp.png https://ozibd.net/iconapp.png
+          fi
+          
+          SRC="public/iconapp.png"
+          BG_COLOR="#F95E4E"
+          
+          # Nettoyer les fichiers Android par défaut qui causent le robot Android
+          rm -f android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
+          rm -f android/app/src/main/res/drawable/ic_launcher_background.xml
+          
+          # Mettre à jour la couleur d'arrière-plan du launcher
+          cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#F95E4E</color>
+</resources>
+EOF
+
+          # Générer les icônes de premier plan adaptatives
+          convert -size 108x108 xc:"$BG_COLOR" \( "$SRC" -resize 76x76 \) -gravity center -composite android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+          convert -size 162x162 xc:"$BG_COLOR" \( "$SRC" -resize 114x114 \) -gravity center -composite android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+          convert -size 216x216 xc:"$BG_COLOR" \( "$SRC" -resize 152x152 \) -gravity center -composite android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+          convert -size 324x324 xc:"$BG_COLOR" \( "$SRC" -resize 228x228 \) -gravity center -composite android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+          convert -size 432x432 xc:"$BG_COLOR" \( "$SRC" -resize 304x304 \) -gravity center -composite android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+
+          # Générer les icônes classiques et rondes
+          convert "$SRC" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert "$SRC" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          convert "$SRC" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert "$SRC" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          convert "$SRC" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert "$SRC" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          convert "$SRC" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert "$SRC" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          convert "$SRC" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          convert "$SRC" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
       - name: ⚙️ Compiler l'APK Android
         run: |
           cd android

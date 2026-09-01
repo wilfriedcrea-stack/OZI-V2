@@ -3,6 +3,7 @@ const CACHE_NAME = 'ozi-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
+  '/iconapp.png',
   '/images/ozi-logo.png',
   '/icon-192.png',
   '/icon-512.png',

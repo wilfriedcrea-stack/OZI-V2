@@ -24,6 +24,7 @@ import {
   Eye,
   Bell,
   Settings,
+  Layers,
 } from 'lucide-react';
 import { OziLogo } from '../common/OziLogo';
 import { WorkDetailView } from '../app/WorkDetailView';
@@ -73,7 +74,7 @@ export const MobileAppExperience: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedGenre, setSelectedGenre] = useState<string>('new');
   const [gameCategory, setGameCategory] = useState<string>('all');
   const [playingGame, setPlayingGame] = useState<Game | null>(null);
 
@@ -140,8 +141,13 @@ export const MobileAppExperience: React.FC = () => {
     setCart([]);
   };
 
-  // Liste des genres uniques
-  const allGenres = ['all', ...Array.from(new Set(works.flatMap((w) => w.genres || [])))];
+  // Liste des sections et genres pour l'Accueil
+  const uniqueGenres = Array.from(new Set(works.flatMap((w) => w.genres || [])));
+  const homePills = [
+    { id: 'new', label: 'Nouveau' },
+    { id: 'all', label: 'Tout' },
+    ...uniqueGenres.map((g) => ({ id: g, label: g })),
+  ];
 
   // Filtrage des œuvres
   const featuredWork = works.find((w) => w.featured) || works[0];
@@ -150,9 +156,13 @@ export const MobileAppExperience: React.FC = () => {
   const filteredWorks = works.filter((w) => {
     const matchesSearch = searchQuery
       ? w.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.genres.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()))
+        w.genres.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        w.author.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
-    const matchesGenre = selectedGenre === 'all' || w.genres.includes(selectedGenre);
+    const matchesGenre =
+      selectedGenre === 'new' || selectedGenre === 'all'
+        ? true
+        : w.genres.includes(selectedGenre);
     return matchesSearch && matchesGenre;
   });
 
@@ -383,254 +393,417 @@ export const MobileAppExperience: React.FC = () => {
           {activeTab === 'home' && (
             <div className="space-y-5 animate-in fade-in duration-200">
               
-              {/* FILTRES CATÉGORIES / GENRES HORIZONTAUX TACTILES */}
+              {/* FILTRES SECTIONS & GENRES HORIZONTAUX TACTILES */}
               <div className="px-3.5 pt-3">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {allGenres.map((genre) => (
+                  {homePills.map((pill) => (
                     <button
-                      key={genre}
-                      onClick={() => setSelectedGenre(genre)}
+                      key={pill.id}
+                      onClick={() => setSelectedGenre(pill.id)}
                       className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer tap-active ${
-                        selectedGenre === genre
+                        selectedGenre === pill.id
                           ? 'bg-[#ff5a50] text-white shadow-md shadow-[#ff5a50]/20'
                           : 'bg-[#181a28] text-slate-400 hover:text-white border border-white/5'
                       }`}
                     >
-                      {genre === 'all' ? 'Tout' : genre}
+                      {pill.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* CARTE HERO BANNIÈRE (Hauteur réduite et plus compacte) */}
-              <div
-                onClick={() => openWorkDetail(featuredWork.id)}
-                className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
-              >
-                <img
-                  src={featuredWork.coverUrl}
-                  alt={featuredWork.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                
-                {/* Badges en haut à gauche */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className="px-3 py-1 bg-[#ff5a50] text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-md flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    NOUVEAU
-                  </span>
-                  <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
-                    {featuredWork.genres[0] || 'Fantasy'}
-                  </span>
-                </div>
-
-                {/* Note en haut à droite */}
-                <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 text-amber-400 text-xs font-black">
-                  <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  <span>{featuredWork.rating}</span>
-                </div>
-
-                {/* Dégradé immersif & Titre */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
-                  <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
-                    Par {featuredWork.author}
-                  </div>
-                  <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
-                    {featuredWork.title}
-                  </h2>
-
-                  {/* Boutons d'action Hero */}
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const featuredChapters = chapters.filter((c) => c.workId === featuredWork.id);
-                        const firstCh = featuredChapters[0] || chapters[0];
-                        if (firstCh) {
-                          openReader(featuredWork.id, firstCh.id);
-                        } else {
-                          openWorkDetail(featuredWork.id);
-                        }
-                      }}
-                      className="flex-1 py-3 px-4 bg-[#ff5a50] hover:bg-[#ff463b] text-white text-xs font-black uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#ff5a50]/30 cursor-pointer tap-active transition-transform"
-                    >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>Lire le Chapitre 1</span>
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBookmark(featuredWork.id);
-                      }}
-                      className={`p-3 rounded-2xl border border-white/15 backdrop-blur-md transition-colors cursor-pointer tap-active ${
-                        isBookmarked(featuredWork.id)
-                          ? 'bg-[#ff5a50] text-white border-[#ff5a50]'
-                          : 'bg-black/50 text-white hover:bg-black/70'
-                      }`}
-                      aria-label="Favoris"
-                    >
-                      <Bookmark className={`w-4 h-4 ${isBookmarked(featuredWork.id) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* BANNIÈRE RECHARGE RAPIDE WAVE MOBILE MONEY */}
-              <div className="mx-3.5 p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-cyan-950/30 to-purple-950/40 border border-cyan-500/30 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black text-white flex items-center gap-1.5">
-                      <span>Pass Fast-Pass Wave</span>
-                      <span className="text-[9px] bg-cyan-500 text-slate-950 font-black px-1.5 py-0.2 rounded">
-                        -20%
+              {/* 1. SECTION : NOUVEAU (Accueil par défaut avec Hero, Populaire et Nouveautés) */}
+              {selectedGenre === 'new' && (
+                <>
+                  {/* CARTE HERO BANNIÈRE */}
+                  <div
+                    onClick={() => openWorkDetail(featuredWork.id)}
+                    className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
+                  >
+                    <img
+                      src={featuredWork.coverUrl}
+                      alt={featuredWork.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    
+                    {/* Badges en haut à gauche */}
+                    <div className="absolute top-4 left-4 flex items-center gap-2">
+                      <span className="px-3 py-1 bg-[#ff5a50] text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-md flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        NOUVEAU
+                      </span>
+                      <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
+                        {featuredWork.genres[0] || 'Fantasy'}
                       </span>
                     </div>
-                    <p className="text-[10px] text-slate-400">Débloquez les sorties exclusives</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => openCoinShop()}
-                  className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-black rounded-xl shadow cursor-pointer tap-active"
-                >
-                  Boutique
-                </button>
-              </div>
 
-              {/* SECTION POPULAIRE CETTE SEMAINE (Carrousel Horizontal) */}
-              <div className="pl-3.5 space-y-3">
-                <div className="flex items-center justify-between pr-3.5">
-                  <div className="flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-[#ff5a50] fill-[#ff5a50]" />
-                    <h3 className="text-base font-black text-white font-almodobar tracking-wide">
-                      Populaire cette semaine
-                    </h3>
-                  </div>
-                  <span className="text-xs text-[#ff5a50] font-bold cursor-pointer hover:underline">
-                    Voir tout
-                  </span>
-                </div>
+                    {/* Note en haut à droite */}
+                    <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 text-amber-400 text-xs font-black">
+                      <Star className="w-3.5 h-3.5 fill-amber-400" />
+                      <span>{featuredWork.rating}</span>
+                    </div>
 
-                {/* Carrousel */}
-                <div className="flex gap-3 overflow-x-auto pb-2 pr-3.5 scrollbar-none snap-x">
-                  {popularWorks.map((work, idx) => (
-                    <div
-                      key={work.id}
-                      onClick={() => openWorkDetail(work.id)}
-                      className="w-36 shrink-0 bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer snap-start tap-active transition-transform"
-                    >
-                      <div className="relative aspect-[3/4] bg-slate-900 group">
-                        <img
-                          src={work.coverUrl}
-                          alt={work.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#ff5a50] text-white text-[8px] font-black uppercase rounded shadow">
-                          TOP #{idx + 1}
-                        </span>
+                    {/* Dégradé immersif & Titre */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
+                      <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
+                        Par {featuredWork.author}
+                      </div>
+                      <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
+                        {featuredWork.title}
+                      </h2>
 
-                        {/* Bouton de lecture rapide */}
+                      {/* Boutons d'action Hero */}
+                      <div className="flex items-center gap-2.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const workChapters = chapters.filter((c) => c.workId === work.id);
-                            const firstCh = workChapters[0] || chapters[0];
+                            const featuredChapters = chapters.filter((c) => c.workId === featuredWork.id);
+                            const firstCh = featuredChapters[0] || chapters[0];
                             if (firstCh) {
-                              openReader(work.id, firstCh.id);
+                              openReader(featuredWork.id, firstCh.id);
                             } else {
-                              openWorkDetail(work.id);
+                              openWorkDetail(featuredWork.id);
                             }
                           }}
-                          className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg cursor-pointer tap-active"
-                          title="Lire le 1er chapitre"
+                          className="flex-1 py-3 px-4 bg-[#ff5a50] hover:bg-[#ff463b] text-white text-xs font-black uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#ff5a50]/30 cursor-pointer tap-active transition-transform"
                         >
-                          <Play className="w-3 h-3 fill-white ml-0.5" />
+                          <Play className="w-4 h-4 fill-white" />
+                          <span>Lire le Chapitre 1</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleBookmark(featuredWork.id);
+                          }}
+                          className={`p-3 rounded-2xl border border-white/15 backdrop-blur-md transition-colors cursor-pointer tap-active ${
+                            isBookmarked(featuredWork.id)
+                              ? 'bg-[#ff5a50] text-white border-[#ff5a50]'
+                              : 'bg-black/50 text-white hover:bg-black/70'
+                          }`}
+                          aria-label="Favoris"
+                        >
+                          <Bookmark className={`w-4 h-4 ${isBookmarked(featuredWork.id) ? 'fill-current' : ''}`} />
                         </button>
                       </div>
-                      <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
-                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
-                          <span className="flex items-center gap-0.5 text-amber-400 font-bold">
-                            <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
+                    </div>
+                  </div>
+
+                  {/* BANNIÈRE RECHARGE RAPIDE WAVE MOBILE MONEY */}
+                  <div className="mx-3.5 p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-cyan-950/30 to-purple-950/40 border border-cyan-500/30 flex items-center justify-between shadow-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-white flex items-center gap-1.5">
+                          <span>Pass Fast-Pass Wave</span>
+                          <span className="text-[9px] bg-cyan-500 text-slate-950 font-black px-1.5 py-0.2 rounded">
+                            -20%
                           </span>
-                          <span>{work.genres[0]}</span>
                         </div>
-                        <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
-                          <Eye className="w-2.5 h-2.5 text-slate-500" />
-                          <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
-                        </div>
+                        <p className="text-[10px] text-slate-400">Débloquez les sorties exclusives</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* SECTION DERNIÈRES SORTIES (Grille 2 colonnes) */}
-              <div className="px-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-base font-black text-white font-almodobar tracking-wide">
-                      Dernières Sorties
-                    </h3>
-                  </div>
-                  <span className="text-xs text-[#ff5a50] font-bold cursor-pointer hover:underline">
-                    {filteredWorks.length} séries
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredWorks.slice(0, 6).map((work) => (
-                    <div
-                      key={work.id}
-                      onClick={() => openWorkDetail(work.id)}
-                      className="bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer tap-active transition-transform"
+                    <button
+                      onClick={() => openCoinShop()}
+                      className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-black rounded-xl shadow cursor-pointer tap-active"
                     >
-                      <div className="aspect-[3/4] bg-slate-900 relative group">
-                        <img
-                          src={work.coverUrl}
-                          alt={work.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10 shadow-sm">
-                          Ch. {work.totalChapters || 12}
-                        </span>
+                      Boutique
+                    </button>
+                  </div>
 
-                        {/* Bouton de lecture directe 1-clic en bas à droite */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const workChapters = chapters.filter((c) => c.workId === work.id);
-                            const firstCh = workChapters[0] || chapters[0];
-                            if (firstCh) {
-                              openReader(work.id, firstCh.id);
-                            } else {
-                              openWorkDetail(work.id);
-                            }
-                          }}
-                          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
-                          title="Lire le 1er chapitre"
-                        >
-                          <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-                        </button>
+                  {/* SECTION POPULAIRE CETTE SEMAINE (Carrousel Horizontal) */}
+                  <div className="pl-3.5 space-y-3">
+                    <div className="flex items-center justify-between pr-3.5">
+                      <div className="flex items-center gap-2">
+                        <Flame className="w-5 h-5 text-[#ff5a50] fill-[#ff5a50]" />
+                        <h3 className="text-base font-black text-white font-almodobar tracking-wide">
+                          Populaire cette semaine
+                        </h3>
                       </div>
-                      <div className="p-2.5">
-                        <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
-                        <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                          {work.genres.join(' • ')}
-                        </p>
-                        <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
-                          <Eye className="w-2.5 h-2.5 text-slate-500" />
-                          <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
+                      <span
+                        onClick={() => setSelectedGenre('all')}
+                        className="text-xs text-[#ff5a50] font-bold cursor-pointer hover:underline"
+                      >
+                        Voir tout
+                      </span>
+                    </div>
+
+                    {/* Carrousel */}
+                    <div className="flex gap-3 overflow-x-auto pb-2 pr-3.5 scrollbar-none snap-x">
+                      {popularWorks.map((work, idx) => (
+                        <div
+                          key={work.id}
+                          onClick={() => openWorkDetail(work.id)}
+                          className="w-36 shrink-0 bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer snap-start tap-active transition-transform"
+                        >
+                          <div className="relative aspect-[3/4] bg-slate-900 group">
+                            <img
+                              src={work.coverUrl}
+                              alt={work.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#ff5a50] text-white text-[8px] font-black uppercase rounded shadow">
+                              TOP #{idx + 1}
+                            </span>
+
+                            {/* Bouton de lecture rapide */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const workChapters = chapters.filter((c) => c.workId === work.id);
+                                const firstCh = workChapters[0] || chapters[0];
+                                if (firstCh) {
+                                  openReader(work.id, firstCh.id);
+                                } else {
+                                  openWorkDetail(work.id);
+                                }
+                              }}
+                              className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg cursor-pointer tap-active"
+                              title="Lire le 1er chapitre"
+                            >
+                              <Play className="w-3 h-3 fill-white ml-0.5" />
+                            </button>
+                          </div>
+                          <div className="p-2.5">
+                            <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
+                            <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                              <span className="flex items-center gap-0.5 text-amber-400 font-bold">
+                                <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
+                              </span>
+                              <span>{work.genres[0]}</span>
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
+                              <Eye className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
+                            </div>
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SECTION DERNIÈRES SORTIES (Grille 2 colonnes) */}
+                  <div className="px-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        <h3 className="text-base font-black text-white font-almodobar tracking-wide">
+                          Dernières Sorties
+                        </h3>
+                      </div>
+                      <span
+                        onClick={() => setSelectedGenre('all')}
+                        className="text-xs text-[#ff5a50] font-bold cursor-pointer hover:underline"
+                      >
+                        Voir tout ({works.length})
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {works.slice(0, 6).map((work) => (
+                        <div
+                          key={work.id}
+                          onClick={() => openWorkDetail(work.id)}
+                          className="bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer tap-active transition-transform"
+                        >
+                          <div className="aspect-[3/4] bg-slate-900 relative group">
+                            <img
+                              src={work.coverUrl}
+                              alt={work.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10 shadow-sm">
+                              Ch. {work.totalChapters || 12}
+                            </span>
+
+                            {/* Bouton de lecture directe 1-clic en bas à droite */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const workChapters = chapters.filter((c) => c.workId === work.id);
+                                const firstCh = workChapters[0] || chapters[0];
+                                if (firstCh) {
+                                  openReader(work.id, firstCh.id);
+                                } else {
+                                  openWorkDetail(work.id);
+                                }
+                              }}
+                              className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
+                              title="Lire le 1er chapitre"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                            </button>
+                          </div>
+                          <div className="p-2.5">
+                            <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                              {work.genres.join(' • ')}
+                            </p>
+                            <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
+                              <Eye className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'} vues</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 2. SECTION : TOUT (Toutes les œuvres présentes sur l'application sans catégorie) */}
+              {selectedGenre === 'all' && (
+                <div className="px-3.5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#ff5a50]/20 border border-[#ff5a50]/30 flex items-center justify-center text-[#ff5a50]">
+                        <Layers className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-white font-almodobar tracking-wide">
+                          Toutes les Œuvres
+                        </h3>
+                        <p className="text-[11px] text-slate-400">Catalogue complet sans catégorie</p>
                       </div>
                     </div>
-                  ))}
+                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs text-[#ff5a50] font-black">
+                      {filteredWorks.length} séries
+                    </span>
+                  </div>
+
+                  {/* Grille complète sans catégorie */}
+                  <div className="grid grid-cols-2 gap-3 pb-6">
+                    {filteredWorks.map((work) => (
+                      <div
+                        key={work.id}
+                        onClick={() => openWorkDetail(work.id)}
+                        className="bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer tap-active transition-transform"
+                      >
+                        <div className="aspect-[3/4] bg-slate-900 relative group">
+                          <img
+                            src={work.coverUrl}
+                            alt={work.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10 shadow-sm">
+                            Ch. {work.totalChapters || 12}
+                          </span>
+
+                          {/* Bouton de lecture directe 1-clic */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const workChapters = chapters.filter((c) => c.workId === work.id);
+                              const firstCh = workChapters[0] || chapters[0];
+                              if (firstCh) {
+                                openReader(work.id, firstCh.id);
+                              } else {
+                                openWorkDetail(work.id);
+                              }
+                            }}
+                            className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
+                            title="Lire le 1er chapitre"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                          </button>
+                        </div>
+                        <div className="p-2.5">
+                          <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                            {work.genres.join(' • ')}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                            <span className="flex items-center gap-0.5 text-amber-400 font-bold">
+                              <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-mono flex items-center gap-1">
+                              <Eye className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* 3. SECTION : FILTRE PAR GENRE SPÉCIFIQUE */}
+              {selectedGenre !== 'new' && selectedGenre !== 'all' && (
+                <div className="px-3.5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-[#ff5a50]" />
+                      <div>
+                        <h3 className="text-base font-black text-white font-almodobar tracking-wide capitalize">
+                          Genre : {selectedGenre}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">Séries classées dans cette catégorie</p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs text-[#ff5a50] font-black">
+                      {filteredWorks.length} séries
+                    </span>
+                  </div>
+
+                  {/* Grille des œuvres du genre */}
+                  <div className="grid grid-cols-2 gap-3 pb-6">
+                    {filteredWorks.map((work) => (
+                      <div
+                        key={work.id}
+                        onClick={() => openWorkDetail(work.id)}
+                        className="bg-[#141624] border border-white/10 rounded-2xl overflow-hidden shadow-md cursor-pointer tap-active transition-transform"
+                      >
+                        <div className="aspect-[3/4] bg-slate-900 relative group">
+                          <img
+                            src={work.coverUrl}
+                            alt={work.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-[9px] font-bold rounded-lg border border-white/10 shadow-sm">
+                            Ch. {work.totalChapters || 12}
+                          </span>
+
+                          {/* Bouton de lecture directe 1-clic */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const workChapters = chapters.filter((c) => c.workId === work.id);
+                              const firstCh = workChapters[0] || chapters[0];
+                              if (firstCh) {
+                                openReader(work.id, firstCh.id);
+                              } else {
+                                openWorkDetail(work.id);
+                              }
+                            }}
+                            className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff5a50] text-white flex items-center justify-center shadow-lg shadow-[#ff5a50]/40 cursor-pointer tap-active"
+                            title="Lire le 1er chapitre"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                          </button>
+                        </div>
+                        <div className="p-2.5">
+                          <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                            {work.genres.join(' • ')}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                            <span className="flex items-center gap-0.5 text-amber-400 font-bold">
+                              <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-mono flex items-center gap-1">
+                              <Eye className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{work.views ? work.views.toLocaleString('fr-FR') : '1.2k'}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
