@@ -857,6 +857,98 @@ Profitez de la lecture 100% gratuite et rejoignez notre communauté grandissante
     tags: ['Annonce', 'Mise à jour', 'Jeux', 'Communauté'],
     readTimeMinutes: 3,
   },
+  {
+    id: 'art-4',
+    title: 'Guide de l’Auteur : Comment soumettre et publier son projet de Webtoon sur OZI',
+    slug: 'guide-auteur-soumettre-webtoon',
+    category: 'Dossier',
+    summary: 'Pitch, bible graphique, découpage des 3 premiers chapitres : notre comité éditorial vous dit tout.',
+    content: `Vous êtes scénariste, dessinateur ou studio indépendant et souhaitez publier votre œuvre originale sur OZI ?
+
+### 1. La structure du dossier de soumission
+Votre dossier doit comporter :
+- Un synopsis complet en 1 page (incluant la fin envisagée).
+- Une fiche détaillée des 4 personnages principaux avec leurs archétypes psychologiques et designs couleurs.
+- Les 3 premiers chapitres entièrement encrés et colorisés au format vertical (800x1280px minimum par tranche).
+
+### 2. Notre accompagnement éditorial
+Les projets retenus bénéficient d'un contrat de co-production, d'une avance sur droits, d'une assistance au lettrage et d'une mise en avant sur notre carrousel principal.`,
+    author: 'Comité Éditorial OZI',
+    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=900&auto=format&fit=crop&q=80',
+    publishedAt: '2026-08-18',
+    tags: ['Guide', 'Auteurs', 'Édition', 'Publication'],
+    readTimeMinutes: 6,
+  },
+  {
+    id: 'art-5',
+    title: 'La Musique d’Ambiance dans les Webtoons : Créer une OST immersive pour chaque planche',
+    slug: 'musique-ambiance-ost-webtoon',
+    category: 'Carnet de création',
+    summary: 'Comment les bandes-son intégrées transforment un simple défilement d’images en véritable expérience cinématique.',
+    content: `L'audio synchronisé est l'une des innovations majeures de la plateforme OZI. En associant une composition sur mesure à un chapitre, le lecteur plonge littéralement au cœur de l'ambiance.
+
+### Le tempo émotionnel
+Un morceau d'ambiance de webtoon ne doit jamais saturer l'oreille. Nos compositeurs travaillent sur des boucles organiques évolutives (piano feutré, nappes synthétiques, percussions d'intensité progressive) qui s'adaptent naturellement à la vitesse de lecture moyenne.
+
+Découvrez les pistes audio intégrées sur nos séries principales en activant l'icône de musique en haut du lecteur !`,
+    author: 'Sora Kim (Sound Designer)',
+    coverUrl: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?w=900&auto=format&fit=crop&q=80',
+    publishedAt: '2026-08-21',
+    tags: ['Musique', 'OST', 'Immersion', 'Son'],
+    readTimeMinutes: 4,
+  },
+  {
+    id: 'art-6',
+    title: 'L’essor du Webtoon en Afrique et en Francophonie : Une nouvelle vague créative',
+    slug: 'essor-webtoon-afrique-francophonie',
+    category: 'Actualité',
+    summary: 'Dakar, Abidjan, Paris, Montréal : comment la narration graphique africaine et francophone s’impose à l’international.',
+    content: `La bande dessinée numérique connaît un engouement sans précédent sur les territoires francophones et panafricains.
+
+Grâce à l'accessibilité des smartphones et au talent d'une nouvelle génération de bédéistes, des récits puisant dans les mythologies ouest-africaines, l'afrofuturisme et les réalités urbaines contemporaines trouvent une audience mondiale.
+
+OZI s'engage à être la vitrine de cette effervescence créative en offrant une plateforme technologique moderne et une rémunération juste aux créateurs.`,
+    author: 'Wilfried OZI (Fondateur)',
+    coverUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=900&auto=format&fit=crop&q=80',
+    publishedAt: '2026-08-24',
+    tags: ['Afrique', 'Culture', 'Webtoon', 'Création'],
+    readTimeMinutes: 5,
+  },
+  {
+    id: 'art-7',
+    title: 'Techniques de Colorisation Numérique : Des palettes d’émotion sous Clip Studio & Photoshop',
+    slug: 'techniques-colorisation-numerique',
+    category: 'Carnet de création',
+    summary: 'Analyse pas à pas des techniques d’ombrage cell-shading et des dégradés d’ambiance nocturne.',
+    content: `La couleur ne sert pas seulement à remplir des cases : elle dicte la température émotionnelle de la scène.
+
+Dans ce carnet technique, nous explorons :
+1. **L'harmonie des teintes complémentaires** pour faire ressortir l'action principale.
+2. **L'utilisation des modes de fusion (Overlay, Color Dodge, Multiply)** pour créer des lueurs magiques intenses.
+3. **L'optimisation des fichiers pour l'écran mobile** afin de garantir une restitution parfaite des noirs profonds.`,
+    author: 'Kenji Takahashi (Directeur Artistique)',
+    coverUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=900&auto=format&fit=crop&q=80',
+    publishedAt: '2026-08-26',
+    tags: ['Dessin', 'Tutoriel', 'Couleur', 'Graphisme'],
+    readTimeMinutes: 7,
+  },
+  {
+    id: 'art-8',
+    title: 'Rencontre avec les Studios Partenaires : Comment nous produisons des chapitres réguliers',
+    slug: 'rencontre-studios-partenaires-production',
+    category: 'Interview',
+    summary: 'Méthodes de travail, répartition des rôles et gestion des délais sans compromettre la santé des artistes.',
+    content: `Le rythme de publication hebdomadaire d'un webtoon est un défi de haute voltige. Pour maintenir une qualité irréprochable sans épuiser les équipes, OZI a mis en place un modèle de studio collaboratif.
+
+Chaque artiste se concentre sur sa spécialité (storyboard, décors 3D, line art ou finalisation couleur) avec des pipelines optimisés et des banques de modèles architecturaux partagés.
+
+Découvrez les secrets d'organisation de notre studio partenaire dans cet entretien exclusif.`,
+    author: 'Mathilde Vaneau (Éditrice OZI)',
+    coverUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=900&auto=format&fit=crop&q=80',
+    publishedAt: '2026-08-28',
+    tags: ['Interview', 'Studio', 'Production', 'Métier'],
+    readTimeMinutes: 5,
+  },
 ];
 
 export const INITIAL_SUBSCRIBERS: NewsletterSubscriber[] = [

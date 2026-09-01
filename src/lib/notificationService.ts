@@ -246,16 +246,16 @@ class NotificationService {
             setTimeout(() => {
               new Notification(title, {
                 body,
-                icon: '/icons/icon-192.png',
-                badge: '/icons/icon-192.png',
+                icon: '/iconapp.png',
+                badge: '/iconapp.png',
                 data,
               });
             }, delaySeconds * 1000);
           } else {
             new Notification(title, {
               body,
-              icon: '/icons/icon-192.png',
-              badge: '/icons/icon-192.png',
+              icon: '/iconapp.png',
+              badge: '/iconapp.png',
               data,
             });
           }

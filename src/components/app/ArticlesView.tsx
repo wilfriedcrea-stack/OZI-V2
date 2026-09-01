@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useOzi } from '../../context/OziContext';
 import { Article } from '../../types';
 import {
@@ -17,6 +17,12 @@ import {
   Send,
   CornerDownRight,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Layers,
+  BookOpenCheck,
 } from 'lucide-react';
 
 interface ArticleComment {
@@ -100,6 +106,9 @@ export const ArticlesView: React.FC = () => {
   } = useOzi();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const articlesPerPage = 4;
+
   const [commentsMap, setCommentsMap] = useState<Record<string, ArticleComment[]>>(INITIAL_ARTICLE_COMMENTS);
   const [newCommentText, setNewCommentText] = useState('');
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
@@ -109,6 +118,8 @@ export const ArticlesView: React.FC = () => {
     return localStorage.getItem('ozi_guest_commenter_name') || 'Lecteur_Anonyme';
   });
   const [isEditingGuestName, setIsEditingGuestName] = useState(false);
+
+  const topSectionRef = useRef<HTMLDivElement>(null);
 
   const currentArticle = articles.find((a) => a.id === selectedArticleId);
 
@@ -125,10 +136,35 @@ export const ArticlesView: React.FC = () => {
     return art.category === selectedCategory;
   });
 
-  const categories = ['all', 'Actualité', 'Carnet', 'Interview'];
+  // Calculate pagination
+  const totalPages = Math.max(1, Math.ceil(filteredArticles.length / articlesPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedArticles = filteredArticles.slice(
+    (safeCurrentPage - 1) * articlesPerPage,
+    safeCurrentPage * articlesPerPage
+  );
+
+  // Reset page to 1 when changing category
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
+
+  const scrollToTop = () => {
+    topSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      scrollToTop();
+    }
+  };
+
+  const categories = ['all', 'Actualité', 'Carnet', 'Interview', 'Dossier'];
 
   const getCategoryLabel = (cat: string) => {
-    if (cat === 'all') return 'Articles';
+    if (cat === 'all') return 'Tous les articles';
     return cat;
   };
 
@@ -142,6 +178,13 @@ export const ArticlesView: React.FC = () => {
   const currentArticleComments = currentArticle
     ? commentsMap[currentArticle.id] || []
     : [];
+
+  // Indices for navigating inside single article view
+  const currentArticleIndex = currentArticle
+    ? articles.findIndex((a) => a.id === currentArticle.id)
+    : -1;
+  const previousArticle = currentArticleIndex > 0 ? articles[currentArticleIndex - 1] : null;
+  const nextArticle = currentArticleIndex >= 0 && currentArticleIndex < articles.length - 1 ? articles[currentArticleIndex + 1] : null;
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +263,7 @@ export const ArticlesView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 pb-20 max-w-5xl mx-auto">
+    <div ref={topSectionRef} className="space-y-8 pb-20 max-w-5xl mx-auto">
       {/* Top Bar */}
       <div className="flex flex-col items-start justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
@@ -232,7 +275,7 @@ export const ArticlesView: React.FC = () => {
             Carnets de création<br />et Actualités
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Secret d'écriture de scénarios, interviews exclusives d’auteurs, making-of des webtoons et annonces officielles de la plateforme.
+            Secrets d'écriture de scénarios, interviews exclusives d’auteurs, making-of des webtoons et annonces officielles de la plateforme.
           </p>
         </div>
       </div>
@@ -240,23 +283,29 @@ export const ArticlesView: React.FC = () => {
       {/* ARTICLE READER DETAIL */}
       {currentArticle ? (
         <article className="space-y-6 max-w-3xl mx-auto">
-          {/* Back button */}
+          {/* Back button & Page Indicator */}
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSelectedArticleId(null)}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Retour aux articles</span>
+              <span>Retour aux articles (Page {safeCurrentPage})</span>
             </button>
 
-            <button
-              onClick={handleShare}
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Partager"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+                Article <strong className="text-emerald-400 font-black">{currentArticleIndex + 1}</strong> / <strong className="text-white font-bold">{articles.length}</strong>
+              </span>
+
+              <button
+                onClick={handleShare}
+                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="Partager"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Article Cover */}
@@ -315,6 +364,94 @@ export const ArticlesView: React.FC = () => {
                 #{t}
               </span>
             ))}
+          </div>
+
+          {/* ========================================================================= */}
+          {/* NAVIGATION EN BAS DE PAGE DE L'ARTICLE (NUMÉROS DE PAGE & SUIVANT / PRÉCÉDENT) */}
+          {/* ========================================================================= */}
+          <div id="article-bottom-page-nav" className="my-8 p-5 bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-slate-800 rounded-2xl shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <BookOpenCheck className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-black text-white uppercase tracking-wider font-['Outfit']">
+                  Navigation du Magazine • Article {currentArticleIndex + 1} sur {articles.length}
+                </span>
+              </div>
+
+              {/* Direct Jump Numbered Page Buttons for all Articles */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <span className="text-[10px] text-slate-500 mr-1 font-mono">Pages :</span>
+                {articles.map((art, idx) => {
+                  const isCurrent = art.id === currentArticle.id;
+                  return (
+                    <button
+                      key={art.id}
+                      onClick={() => {
+                        openArticle(art.id);
+                        scrollToTop();
+                      }}
+                      className={`w-7 h-7 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                        isCurrent
+                          ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/30 scale-110 font-black ring-2 ring-emerald-400'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/60'
+                      }`}
+                      title={`${idx + 1}. ${art.title}`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Prev / Next Article Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {previousArticle ? (
+                <button
+                  onClick={() => {
+                    openArticle(previousArticle.id);
+                    scrollToTop();
+                  }}
+                  className="p-3 bg-slate-950/70 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/40 rounded-xl transition-all text-left flex items-start gap-3 group cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 group-hover:-translate-x-1 transition-transform" />
+                  <div className="overflow-hidden">
+                    <span className="text-[10px] text-slate-400 font-mono block">← Article précédent ({currentArticleIndex})</span>
+                    <span className="text-xs font-bold text-white group-hover:text-emerald-300 line-clamp-1">
+                      {previousArticle.title}
+                    </span>
+                  </div>
+                </button>
+              ) : (
+                <div className="p-3 bg-slate-950/30 border border-slate-800/40 rounded-xl text-slate-600 text-xs flex items-center gap-2">
+                  <ChevronLeft className="w-4 h-4 opacity-40" />
+                  <span>Premier article du magazine</span>
+                </div>
+              )}
+
+              {nextArticle ? (
+                <button
+                  onClick={() => {
+                    openArticle(nextArticle.id);
+                    scrollToTop();
+                  }}
+                  className="p-3 bg-slate-950/70 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/40 rounded-xl transition-all text-right flex items-start justify-end gap-3 group cursor-pointer"
+                >
+                  <div className="overflow-hidden">
+                    <span className="text-[10px] text-slate-400 font-mono block">Article suivant ({currentArticleIndex + 2}) →</span>
+                    <span className="text-xs font-bold text-white group-hover:text-emerald-300 line-clamp-1">
+                      {nextArticle.title}
+                    </span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : (
+                <div className="p-3 bg-slate-950/30 border border-slate-800/40 rounded-xl text-slate-600 text-xs flex items-center justify-end gap-2">
+                  <span>Dernier article du magazine</span>
+                  <ChevronRight className="w-4 h-4 opacity-40" />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ========================================================================= */}
@@ -542,76 +679,189 @@ export const ArticlesView: React.FC = () => {
         /* ARTICLES CATALOGUE LIST */
         <div className="space-y-6">
           {/* Categories Selector */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-pill text-xs font-bold transition-colors cursor-pointer capitalize ${
-                  selectedCategory === cat
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {getCategoryLabel(cat)}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleCategoryChange(cat)}
+                  className={`px-3.5 py-1.5 rounded-pill text-xs font-bold transition-colors cursor-pointer capitalize ${
+                    selectedCategory === cat
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {getCategoryLabel(cat)}
+                </button>
+              ))}
+            </div>
+
+            {/* Total count badge */}
+            <div className="text-xs text-slate-400 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                <strong className="text-white font-bold">{filteredArticles.length}</strong> article{filteredArticles.length > 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
 
           {/* Articles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredArticles.map((art) => (
-              <div
-                key={art.id}
-                onClick={() => openArticle(art.id)}
-                className="group bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer"
+          {paginatedArticles.length === 0 ? (
+            <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">
+              <Newspaper className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-white">Aucun article dans cette catégorie</h3>
+              <p className="text-xs text-slate-400 mt-1">Revenez bientôt pour découvrir de nouveaux carnets de création !</p>
+              <button
+                onClick={() => handleCategoryChange('all')}
+                className="mt-4 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl cursor-pointer"
               >
-                <div className="relative aspect-[16/9] overflow-hidden bg-slate-950">
-                  <img
-                    src={art.coverUrl}
-                    alt={art.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-black text-emerald-400 uppercase">
-                    {art.category}
+                Afficher tous les articles
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {paginatedArticles.map((art) => (
+                <div
+                  key={art.id}
+                  onClick={() => openArticle(art.id)}
+                  className="group bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 rounded-2xl overflow-hidden shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                >
+                  <div className="relative aspect-[16/9] overflow-hidden bg-slate-950">
+                    <img
+                      src={art.coverUrl}
+                      alt={art.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[10px] font-black text-emerald-400 uppercase">
+                      {art.category}
+                    </div>
                   </div>
-                </div>
 
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-2">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {new Date(art.publishedAt).toLocaleDateString('fr-FR')}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        {art.readTimeMinutes} min
-                      </span>
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mb-2">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(art.publishedAt).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          {art.readTimeMinutes} min
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-2 leading-snug font-almodobar tracking-wide">
+                        {art.title}
+                      </h3>
+
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        {art.summary}
+                      </p>
                     </div>
 
-                    <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-2 leading-snug font-almodobar tracking-wide">
-                      {art.title}
-                    </h3>
-
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                      {art.summary}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-400">
-                      Par <strong className="text-slate-300">{art.author}</strong>
-                    </span>
-                    <span className="text-emerald-400 font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                      Lire l'article <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-slate-400">
+                        Par <strong className="text-slate-300">{art.author}</strong>
+                      </span>
+                      <span className="text-emerald-400 font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                        Lire l'article <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* BARRE DE PAGINATION EN BAS DE LA LISTE DES ARTICLES AVEC NUMÉROS DE PAGE */}
+          {/* ========================================================================= */}
+          {totalPages > 1 && (
+            <div
+              id="articles-pagination-bar"
+              className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800"
+            >
+              {/* Indicateur de page textuel */}
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-medium">
+                  Page <strong className="text-emerald-400 font-black">{safeCurrentPage}</strong> sur <strong className="text-white font-bold">{totalPages}</strong>
+                </span>
+                <span className="text-[11px] text-slate-500 hidden sm:inline">
+                  ({filteredArticles.length} articles répertoriés)
+                </span>
               </div>
-            ))}
-          </div>
+
+              {/* Boutons de pagination numérotés */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {/* Bouton Première page */}
+                <button
+                  id="btn-page-first"
+                  onClick={() => handlePageChange(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
+                  title="Première page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+
+                {/* Bouton Page précédente */}
+                <button
+                  id="btn-page-prev"
+                  onClick={() => handlePageChange(safeCurrentPage - 1)}
+                  disabled={safeCurrentPage === 1}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
+                  title="Page précédente"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden xs:inline">Précédent</span>
+                </button>
+
+                {/* Numéros de page directs */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                  const isActive = pageNum === safeCurrentPage;
+                  return (
+                    <button
+                      key={pageNum}
+                      id={`btn-page-num-${pageNum}`}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                        isActive
+                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 scale-105 border border-emerald-400 font-extrabold'
+                          : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                {/* Bouton Page suivante */}
+                <button
+                  id="btn-page-next"
+                  onClick={() => handlePageChange(safeCurrentPage + 1)}
+                  disabled={safeCurrentPage === totalPages}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
+                  title="Page suivante"
+                >
+                  <span className="hidden xs:inline">Suivant</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* Bouton Dernière page */}
+                <button
+                  id="btn-page-last"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={safeCurrentPage === totalPages}
+                  className="p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
+                  title="Dernière page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

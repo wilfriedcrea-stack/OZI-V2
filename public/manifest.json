@@ -12,6 +12,18 @@
   "id": "https://ais-dev-x6cnp754rcffmewjrd5vti-456352814198.europe-west2.run.app",
   "icons": [
     {
+      "src": "/iconapp.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconapp.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
@@ -28,12 +40,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/images/ozi-logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
     }
   ]
 }
