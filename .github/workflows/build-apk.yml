@@ -60,17 +60,18 @@ jobs:
           SRC="public/iconapp.png"
           BG_COLOR="#F95E4E"
           
-          # Nettoyer les fichiers Android par défaut qui causent le robot Android
+          # Nettoyer les anciens fichiers Android par défaut
           rm -f android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
           rm -f android/app/src/main/res/drawable/ic_launcher_background.xml
           
           # Mettre à jour la couleur d'arrière-plan du launcher
-          cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">#F95E4E</color>
-</resources>
-EOF
+          echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/values/ic_launcher_background.xml
+          echo '<resources>' >> android/app/src/main/res/values/ic_launcher_background.xml
+          echo '    <color name="ic_launcher_background">#F95E4E</color>' >> android/app/src/main/res/values/ic_launcher_background.xml
+          echo '</resources>' >> android/app/src/main/res/values/ic_launcher_background.xml
+
+          # Installer ImageMagick si non présent
+          command -v convert >/dev/null 2>&1 || sudo apt-get update && sudo apt-get install -y imagemagick
 
           # Générer les icônes de premier plan adaptatives
           convert -size 108x108 xc:"$BG_COLOR" \( "$SRC" -resize 76x76 \) -gravity center -composite android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
