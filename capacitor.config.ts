@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'OZI Webtoons',
   webDir: 'dist',
   server: {
-    url: 'https://ais-pre-66f5bbtejm4rjt3mgvwosm-456352814198.europe-west2.run.app',
-    androidScheme: 'https',
+    url: 'https://ozibd.net', // <-- Votre URL LWS ici (ex: https://ozibd.net)
     cleartext: true,
   },
   plugins: {
