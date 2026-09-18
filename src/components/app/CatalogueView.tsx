@@ -50,13 +50,13 @@ export const CatalogueView: React.FC = () => {
         // Format filter
         if (selectedType !== 'all' && w.type !== selectedType) return false;
         // Genre filter
-        if (selectedGenre !== 'all' && !w.genres.includes(selectedGenre)) return false;
+        if (selectedGenre !== 'all' && !w.genres?.includes(selectedGenre)) return false;
         // Search filter
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
-          const matchTitle = w.title.toLowerCase().includes(q);
-          const matchAuthor = w.author.toLowerCase().includes(q) || w.artist.toLowerCase().includes(q);
-          const matchGenre = w.genres.some((g) => g.toLowerCase().includes(q));
+          const matchTitle = w.title?.toLowerCase().includes(q);
+          const matchAuthor = w.author?.toLowerCase().includes(q) || (w.artist && w.artist.toLowerCase().includes(q));
+          const matchGenre = w.genres?.some((g) => g.toLowerCase().includes(q));
           if (!matchTitle && !matchAuthor && !matchGenre) return false;
         }
         return true;
@@ -75,7 +75,7 @@ export const CatalogueView: React.FC = () => {
   return (
     <div className="space-y-8 pb-16">
       {/* HERO SPOTLIGHT BANNER (Featured Work) */}
-      {!searchQuery && (
+      {!searchQuery && featuredWork && (
         <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl">
           <div className="relative min-h-[340px] sm:min-h-[400px] flex flex-col justify-end p-6 sm:p-10">
             {/* Background Image with Overlay */}
@@ -98,7 +98,7 @@ export const CatalogueView: React.FC = () => {
                   {featuredWork.rating}
                 </span>
                 <span className="text-xs text-slate-300">
-                  {featuredWork.genres.slice(0, 3).join(' • ')}
+                  {featuredWork.genres?.slice(0, 3)?.join(' • ') || ''}
                 </span>
               </div>
 
@@ -307,7 +307,7 @@ export const CatalogueView: React.FC = () => {
                         {work.title}
                       </h3>
                       <p className="text-[11px] text-slate-400 truncate mt-0.5 font-sans">
-                        {work.genres.slice(0, 2).join(' • ')}
+                        {work.genres?.slice(0, 2)?.join(' • ') || ''}
                       </p>
                     </div>
 

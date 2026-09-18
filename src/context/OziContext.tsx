@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   Work,
   Chapter,
+  Genre,
   Comment,
   CommentReply,
   Game,
@@ -223,7 +224,60 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 4000);
   };
 
-  // State initialization with localStorage fallback
+// State initialization with localStorage fallback
+  const sanitizeWorkData = (data: any, id?: string): Work => {
+    const rawGenres = data?.genres;
+    let safeGenres: Genre[] = ['Action', 'Fantasy'];
+    if (Array.isArray(rawGenres) && rawGenres.length > 0) {
+      safeGenres = rawGenres;
+    } else if (typeof data?.genre === 'string' && data.genre.trim()) {
+      safeGenres = [data.genre.trim() as Genre];
+    }
+
+    return {
+      ...(data || {}),
+      id: id || data?.id || 'work-1',
+      title: data?.title || 'Sans titre',
+      originalTitle: data?.originalTitle || '',
+      type: data?.type || 'webtoon',
+      genres: safeGenres,
+      synopsis: data?.synopsis || '',
+      author: data?.author || 'Auteur OZI',
+      artist: data?.artist || data?.author || 'Artiste OZI',
+      coverUrl: data?.coverUrl || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=85',
+      bannerUrl: data?.bannerUrl || data?.coverUrl || '',
+      rating: typeof data?.rating === 'number' ? data.rating : 9.8,
+      views: typeof data?.views === 'number' ? data.views : 0,
+      likes: typeof data?.likes === 'number' ? data.likes : 0,
+      status: data?.status || 'ongoing',
+      featured: !!data?.featured,
+      releaseYear: typeof data?.releaseYear === 'number' ? data.releaseYear : new Date().getFullYear(),
+      totalChapters: typeof data?.totalChapters === 'number' ? data.totalChapters : (data?.totalEpisodes || 0),
+      createdAt: data?.createdAt || new Date().toISOString(),
+      updatedAt: data?.updatedAt || new Date().toISOString(),
+    };
+  };
+
+  const sanitizeChapterData = (data: any, id?: string): Chapter => {
+    return {
+      ...(data || {}),
+      id: id || data?.id || 'ch-1-1',
+      workId: data?.workId || data?.serieId || 'work-1',
+      chapterNumber: typeof data?.chapterNumber === 'number' ? data.chapterNumber : (data?.episodeNumber || 1),
+      title: data?.title || `Chapitre ${data?.chapterNumber || 1}`,
+      releaseDate: data?.releaseDate || new Date().toISOString().split('T')[0],
+      pages: Array.isArray(data?.pages) ? data.pages : [],
+      likesCount: typeof data?.likesCount === 'number' ? data.likesCount : 0,
+      dislikesCount: typeof data?.dislikesCount === 'number' ? data.dislikesCount : 0,
+      viewsCount: typeof data?.viewsCount === 'number' ? data.viewsCount : 0,
+      isFree: data?.isFree !== false,
+      coinPrice: typeof data?.coinPrice === 'number' ? data.coinPrice : 5,
+      audioUrl: data?.audioUrl || '',
+      audioTitle: data?.audioTitle || '',
+      audioArtist: data?.audioArtist || '',
+    };
+  };
+
   const [users, setUsers] = useState<User[]>(() => loadStorage(STORAGE_KEYS.USERS, INITIAL_USERS));
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = loadStorage<User | null>(STORAGE_KEYS.CURRENT_USER, null);
@@ -232,8 +286,16 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return saved;
   });
-  const [works, setWorks] = useState<Work[]>(() => loadStorage(STORAGE_KEYS.WORKS, INITIAL_WORKS));
-  const [chapters, setChapters] = useState<Chapter[]>(() => loadStorage(STORAGE_KEYS.CHAPTERS, INITIAL_CHAPTERS));
+  const [works, setWorks] = useState<Work[]>(() => {
+    const stored = loadStorage<Work[]>(STORAGE_KEYS.WORKS, INITIAL_WORKS);
+    if (!Array.isArray(stored) || stored.length === 0) return INITIAL_WORKS;
+    return stored.map((w) => sanitizeWorkData(w));
+  });
+  const [chapters, setChapters] = useState<Chapter[]>(() => {
+    const stored = loadStorage<Chapter[]>(STORAGE_KEYS.CHAPTERS, INITIAL_CHAPTERS);
+    if (!Array.isArray(stored) || stored.length === 0) return INITIAL_CHAPTERS;
+    return stored.map((c) => sanitizeChapterData(c));
+  });
   const [comments, setComments] = useState<Comment[]>(() => loadStorage(STORAGE_KEYS.COMMENTS, INITIAL_COMMENTS));
   const [games, setGames] = useState<Game[]>(() => loadStorage(STORAGE_KEYS.GAMES, INITIAL_GAMES));
   const [articles, setArticles] = useState<Article[]>(() => loadStorage(STORAGE_KEYS.ARTICLES, INITIAL_ARTICLES));
@@ -269,7 +331,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const newUser: User = {
               id: firebaseUser.uid,
               email: email,
-              username: firebaseUser.displayName || email.split('@')[0] || 'Lecteur OZI',
+              username: firebaseUser.displayName || (email && email.includes('@') ? email.split('@')[0] : 'Lecteur OZI'),
               avatar: firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
               role: role,
               bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Lecteur officiel sur OZI Webtoons',
@@ -297,33 +359,63 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronisation en temps réel de toutes les entités depuis Firestore
   useEffect(() => {
+    let unsubs: (() => void)[] = [];
     try {
+      // 1. Works / Séries
+      let worksMap: Record<string, Work> = {};
+      const updateCombinedWorks = () => {
+        const list = Object.values(worksMap);
+        if (list.length > 0) {
+          setWorks(list);
+        }
+      };
+
       const worksCol = collection(db, 'works');
-      const unsubscribeWorks = onSnapshot(
+      const unsubWorks = onSnapshot(
         worksCol,
         (snapshot) => {
           if (!snapshot.empty) {
-            const cloudWorks = snapshot.docs.map((d) => d.data() as Work);
-            setWorks(cloudWorks);
+            snapshot.docs.forEach((d) => {
+              worksMap[d.id] = sanitizeWorkData(d.data(), d.id);
+            });
+            updateCombinedWorks();
           }
         },
         (err) => console.log('Works Firestore offline fallback')
       );
+      unsubs.push(unsubWorks);
 
+      const seriesCol = collection(db, 'series');
+      const unsubSeries = onSnapshot(
+        seriesCol,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            snapshot.docs.forEach((d) => {
+              worksMap[d.id] = sanitizeWorkData(d.data(), d.id);
+            });
+            updateCombinedWorks();
+          }
+        },
+        (err) => console.log('Series Firestore offline fallback')
+      );
+      unsubs.push(unsubSeries);
+
+      // 2. Chapters
       const chaptersCol = collection(db, 'chapters');
-      const unsubscribeChapters = onSnapshot(
+      const unsubChapters = onSnapshot(
         chaptersCol,
         (snapshot) => {
           if (!snapshot.empty) {
-            const cloudChapters = snapshot.docs.map((d) => d.data() as Chapter);
+            const cloudChapters = snapshot.docs.map((d) => sanitizeChapterData(d.data(), d.id));
             setChapters(cloudChapters);
           }
         },
         (err) => console.log('Chapters Firestore offline fallback')
       );
+      unsubs.push(unsubChapters);
 
       const gamesCol = collection(db, 'games');
-      const unsubscribeGames = onSnapshot(
+      const unsubGames = onSnapshot(
         gamesCol,
         (snapshot) => {
           if (!snapshot.empty) {
@@ -333,9 +425,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         (err) => console.log('Games Firestore offline fallback')
       );
+      unsubs.push(unsubGames);
 
       const articlesCol = collection(db, 'articles');
-      const unsubscribeArticles = onSnapshot(
+      const unsubArticles = onSnapshot(
         articlesCol,
         (snapshot) => {
           if (!snapshot.empty) {
@@ -345,9 +438,10 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         (err) => console.log('Articles Firestore offline fallback')
       );
+      unsubs.push(unsubArticles);
 
       const commentsCol = collection(db, 'comments');
-      const unsubscribeComments = onSnapshot(
+      const unsubComments = onSnapshot(
         commentsCol,
         (snapshot) => {
           if (!snapshot.empty) {
@@ -357,17 +451,14 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         (err) => console.log('Comments Firestore offline fallback')
       );
-
-      return () => {
-        unsubscribeWorks();
-        unsubscribeChapters();
-        unsubscribeGames();
-        unsubscribeArticles();
-        unsubscribeComments();
-      };
+      unsubs.push(unsubComments);
     } catch (e) {
       console.warn('Firestore subscription fallback:', e);
     }
+
+    return () => {
+      unsubs.forEach((u) => u());
+    };
   }, []);
 
   // Notifications OS & Clics hors de l'application
@@ -510,7 +601,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let userObj: User = {
         id: firebaseUser.uid,
         email: email,
-        username: firebaseUser.displayName || email.split('@')[0] || 'Lecteur OZI',
+        username: firebaseUser.displayName || (email && email.includes('@') ? email.split('@')[0] : 'Lecteur OZI'),
         avatar: firebaseUser.photoURL || `https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80`,
         role: role,
         bio: role === 'admin' ? 'Créateur et Administrateur de la plateforme OZI' : 'Lecteur officiel sur OZI Webtoons',
@@ -558,7 +649,7 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const role = isWilfriedAdmin(cleanEmail) ? 'admin' : 'user';
     const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
-    const displayName = googleName || (cleanEmail === 'wilfriedcrea@gmail.com' ? 'Wilfried (Créateur)' : cleanEmail.split('@')[0]);
+    const displayName = googleName || (cleanEmail === 'wilfriedcrea@gmail.com' ? 'Wilfried (Créateur)' : (cleanEmail.includes('@') ? cleanEmail.split('@')[0] : cleanEmail));
     
     const userObj: User = existing ? { ...existing, role } : {
       id: `google-${cleanEmail.replace(/[^a-z0-9]/gi, '_')}`,
@@ -1463,12 +1554,13 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Derived states
-  const currentWork = works.find((w) => w.id === selectedWorkId) || works[0];
+  const currentWork = works.find((w) => w.id === selectedWorkId) || works[0] || INITIAL_WORKS[0];
   const workChapters = chapters.filter((c) => c.workId === (currentWork?.id || 'work-1'));
   const currentChapter =
     chapters.find((c) => c.id === selectedChapterId) ||
     workChapters[0] ||
-    chapters[0];
+    chapters[0] ||
+    INITIAL_CHAPTERS[0];
 
   const isBookmarked = (workId: string) => {
     return !!currentUser?.bookmarks?.includes(workId);

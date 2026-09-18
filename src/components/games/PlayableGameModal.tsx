@@ -214,7 +214,7 @@ export const PlayableGameModal: React.FC<PlayableGameModalProps> = ({ game, isOp
 
   // Touch / mouse steer
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || !e.touches?.[0]) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const touchX = e.touches[0].clientX - rect.left;
     const percent = Math.min(90, Math.max(10, (touchX / rect.width) * 100));

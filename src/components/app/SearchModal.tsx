@@ -86,15 +86,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
 
     const q = searchTerm.toLowerCase().trim();
     return works.filter((w) => {
-      if (selectedGenre !== 'all' && !w.genres.includes(selectedGenre)) {
+      if (selectedGenre !== 'all' && !w.genres?.includes(selectedGenre as any)) {
         return false;
       }
       if (!q) return true;
 
-      const matchTitle = w.title.toLowerCase().includes(q);
-      const matchAuthor = w.author.toLowerCase().includes(q) || (w.artist && w.artist.toLowerCase().includes(q));
-      const matchGenre = w.genres.some((g) => g.toLowerCase().includes(q));
-      const matchSynopsis = w.synopsis.toLowerCase().includes(q);
+      const matchTitle = w.title?.toLowerCase().includes(q);
+      const matchAuthor = w.author?.toLowerCase().includes(q) || (w.artist && w.artist.toLowerCase().includes(q));
+      const matchGenre = w.genres?.some((g) => g.toLowerCase().includes(q));
+      const matchSynopsis = w.synopsis?.toLowerCase().includes(q);
 
       return matchTitle || matchAuthor || matchGenre || matchSynopsis;
     });
@@ -262,7 +262,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                         </span>
                         <span>•</span>
                         <span className="text-slate-400 truncate">
-                          {work.genres.slice(0, 2).join(', ')}
+                          {work.genres?.slice(0, 2)?.join(', ') || ''}
                         </span>
                       </div>
                     </div>
@@ -344,7 +344,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                         {work.title}
                       </h4>
                       <p className="text-xs text-slate-400 truncate mt-0.5">
-                        {work.genres.slice(0, 3).join(' • ')}
+                        {work.genres?.slice(0, 3)?.join(' • ') || ''}
                       </p>
                       <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
                         <span className="text-amber-400 font-bold flex items-center gap-1">

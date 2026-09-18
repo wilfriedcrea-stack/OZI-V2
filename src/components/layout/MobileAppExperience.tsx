@@ -142,7 +142,7 @@ export const MobileAppExperience: React.FC = () => {
   };
 
   // Liste des sections et genres pour l'Accueil
-  const uniqueGenres = Array.from(new Set(works.flatMap((w) => w.genres || [])));
+  const uniqueGenres = Array.from(new Set(works.flatMap((w) => w?.genres || [])));
   const homePills = [
     { id: 'new', label: 'Nouveau' },
     { id: 'all', label: 'Tout' },
@@ -155,14 +155,14 @@ export const MobileAppExperience: React.FC = () => {
 
   const filteredWorks = works.filter((w) => {
     const matchesSearch = searchQuery
-      ? w.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.genres.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        w.author.toLowerCase().includes(searchQuery.toLowerCase())
+      ? w.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        w.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        w.author?.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
     const matchesGenre =
       selectedGenre === 'new' || selectedGenre === 'all'
         ? true
-        : w.genres.includes(selectedGenre);
+        : w.genres?.includes(selectedGenre as any);
     return matchesSearch && matchesGenre;
   });
 
@@ -416,78 +416,80 @@ export const MobileAppExperience: React.FC = () => {
               {selectedGenre === 'new' && (
                 <>
                   {/* CARTE HERO BANNIÈRE */}
-                  <div
-                    onClick={() => openWorkDetail(featuredWork.id)}
-                    className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
-                  >
-                    <img
-                      src={featuredWork.coverUrl}
-                      alt={featuredWork.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    
-                    {/* Badges en haut à gauche */}
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                      <span className="px-3 py-1 bg-[#ff5a50] text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-md flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        NOUVEAU
-                      </span>
-                      <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
-                        {featuredWork.genres[0] || 'Fantasy'}
-                      </span>
-                    </div>
-
-                    {/* Note en haut à droite */}
-                    <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 text-amber-400 text-xs font-black">
-                      <Star className="w-3.5 h-3.5 fill-amber-400" />
-                      <span>{featuredWork.rating}</span>
-                    </div>
-
-                    {/* Dégradé immersif & Titre */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
-                      <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
-                        Par {featuredWork.author}
+                  {featuredWork && (
+                    <div
+                      onClick={() => openWorkDetail(featuredWork.id)}
+                      className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
+                    >
+                      <img
+                        src={featuredWork.coverUrl}
+                        alt={featuredWork.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      
+                      {/* Badges en haut à gauche */}
+                      <div className="absolute top-4 left-4 flex items-center gap-2">
+                        <span className="px-3 py-1 bg-[#ff5a50] text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-md flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          NOUVEAU
+                        </span>
+                        <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
+                          {featuredWork.genres?.[0] || 'Fantasy'}
+                        </span>
                       </div>
-                      <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
-                        {featuredWork.title}
-                      </h2>
 
-                      {/* Boutons d'action Hero */}
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const featuredChapters = chapters.filter((c) => c.workId === featuredWork.id);
-                            const firstCh = featuredChapters[0] || chapters[0];
-                            if (firstCh) {
-                              openReader(featuredWork.id, firstCh.id);
-                            } else {
-                              openWorkDetail(featuredWork.id);
-                            }
-                          }}
-                          className="flex-1 py-3 px-4 bg-[#ff5a50] hover:bg-[#ff463b] text-white text-xs font-black uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#ff5a50]/30 cursor-pointer tap-active transition-transform"
-                        >
-                          <Play className="w-4 h-4 fill-white" />
-                          <span>Lire le Chapitre 1</span>
-                        </button>
+                      {/* Note en haut à droite */}
+                      <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 text-amber-400 text-xs font-black">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span>{featuredWork.rating}</span>
+                      </div>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleBookmark(featuredWork.id);
-                          }}
-                          className={`p-3 rounded-2xl border border-white/15 backdrop-blur-md transition-colors cursor-pointer tap-active ${
-                            isBookmarked(featuredWork.id)
-                              ? 'bg-[#ff5a50] text-white border-[#ff5a50]'
-                              : 'bg-black/50 text-white hover:bg-black/70'
-                          }`}
-                          aria-label="Favoris"
-                        >
-                          <Bookmark className={`w-4 h-4 ${isBookmarked(featuredWork.id) ? 'fill-current' : ''}`} />
-                        </button>
+                      {/* Dégradé immersif & Titre */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
+                        <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
+                          Par {featuredWork.author}
+                        </div>
+                        <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
+                          {featuredWork.title}
+                        </h2>
+
+                        {/* Boutons d'action Hero */}
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const featuredChapters = chapters.filter((c) => c.workId === featuredWork.id);
+                              const firstCh = featuredChapters?.[0] || chapters?.[0];
+                              if (firstCh) {
+                                openReader(featuredWork.id, firstCh.id);
+                              } else {
+                                openWorkDetail(featuredWork.id);
+                              }
+                            }}
+                            className="flex-1 py-3 px-4 bg-[#ff5a50] hover:bg-[#ff463b] text-white text-xs font-black uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#ff5a50]/30 cursor-pointer tap-active transition-transform"
+                          >
+                            <Play className="w-4 h-4 fill-white" />
+                            <span>Lire le Chapitre 1</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookmark(featuredWork.id);
+                            }}
+                            className={`p-3 rounded-2xl border border-white/15 backdrop-blur-md transition-colors cursor-pointer tap-active ${
+                              isBookmarked(featuredWork.id)
+                                ? 'bg-[#ff5a50] text-white border-[#ff5a50]'
+                                : 'bg-black/50 text-white hover:bg-black/70'
+                            }`}
+                            aria-label="Favoris"
+                          >
+                            <Bookmark className={`w-4 h-4 ${isBookmarked(featuredWork.id) ? 'fill-current' : ''}`} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* BANNIÈRE RECHARGE RAPIDE WAVE MOBILE MONEY */}
                   <div className="mx-3.5 p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-cyan-950/30 to-purple-950/40 border border-cyan-500/30 flex items-center justify-between shadow-lg">
@@ -553,7 +555,7 @@ export const MobileAppExperience: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const workChapters = chapters.filter((c) => c.workId === work.id);
-                                const firstCh = workChapters[0] || chapters[0];
+                                const firstCh = workChapters?.[0] || chapters?.[0];
                                 if (firstCh) {
                                   openReader(work.id, firstCh.id);
                                 } else {
@@ -572,7 +574,7 @@ export const MobileAppExperience: React.FC = () => {
                               <span className="flex items-center gap-0.5 text-amber-400 font-bold">
                                 <Star className="w-2.5 h-2.5 fill-amber-400" /> {work.rating}
                               </span>
-                              <span>{work.genres[0]}</span>
+                              <span>{work.genres?.[0] || 'Webtoon'}</span>
                             </div>
                             <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
                               <Eye className="w-2.5 h-2.5 text-slate-500" />
@@ -623,7 +625,7 @@ export const MobileAppExperience: React.FC = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const workChapters = chapters.filter((c) => c.workId === work.id);
-                                const firstCh = workChapters[0] || chapters[0];
+                                const firstCh = workChapters?.[0] || chapters?.[0];
                                 if (firstCh) {
                                   openReader(work.id, firstCh.id);
                                 } else {
@@ -639,7 +641,7 @@ export const MobileAppExperience: React.FC = () => {
                           <div className="p-2.5">
                             <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
                             <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                              {work.genres.join(' • ')}
+                              {work.genres?.join(' • ') || 'Webtoon'}
                             </p>
                             <div className="text-[9px] text-slate-400 font-mono mt-1 flex items-center gap-1">
                               <Eye className="w-2.5 h-2.5 text-slate-500" />
@@ -696,7 +698,7 @@ export const MobileAppExperience: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               const workChapters = chapters.filter((c) => c.workId === work.id);
-                              const firstCh = workChapters[0] || chapters[0];
+                              const firstCh = workChapters?.[0] || chapters?.[0];
                               if (firstCh) {
                                 openReader(work.id, firstCh.id);
                               } else {
@@ -712,7 +714,7 @@ export const MobileAppExperience: React.FC = () => {
                         <div className="p-2.5">
                           <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
                           <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                            {work.genres.join(' • ')}
+                            {work.genres?.join(' • ') || 'Webtoon'}
                           </p>
                           <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
                             <span className="flex items-center gap-0.5 text-amber-400 font-bold">
@@ -771,7 +773,7 @@ export const MobileAppExperience: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               const workChapters = chapters.filter((c) => c.workId === work.id);
-                              const firstCh = workChapters[0] || chapters[0];
+                              const firstCh = workChapters?.[0] || chapters?.[0];
                               if (firstCh) {
                                 openReader(work.id, firstCh.id);
                               } else {
@@ -787,7 +789,7 @@ export const MobileAppExperience: React.FC = () => {
                         <div className="p-2.5">
                           <h4 className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">{work.title}</h4>
                           <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                            {work.genres.join(' • ')}
+                            {work.genres?.join(' • ') || 'Webtoon'}
                           </p>
                           <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
                             <span className="flex items-center gap-0.5 text-amber-400 font-bold">

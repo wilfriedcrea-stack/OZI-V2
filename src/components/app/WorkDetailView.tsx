@@ -133,7 +133,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
   };
 
   const handleReadFirstChapter = () => {
-    const firstChapter = sortedChapters[0] || chapters[0];
+    const firstChapter = sortedChapters?.[0] || chapters?.[0];
     if (firstChapter) {
       openReader(currentWork.id, firstChapter.id);
     }
@@ -178,7 +178,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({ onOpenShop, onAd
             {currentWork.title}
           </h1>
           <p className="text-xs text-slate-300 font-medium">
-            {currentWork.genres.join(' • ')}
+            {currentWork.genres?.join(' • ') || 'Webtoon'}
           </p>
         </div>
       </div>
