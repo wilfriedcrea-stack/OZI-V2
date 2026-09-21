@@ -26,6 +26,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showGoogleEmailInput, setShowGoogleEmailInput] = useState(false);
   const [googleEmailValue, setGoogleEmailValue] = useState('');
+  const [googleNameValue, setGoogleNameValue] = useState('');
 
   if (!isOpen) return null;
 
@@ -73,27 +74,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setErrorMessage(null);
-    setLoading(true);
-    try {
-      const res = await loginWithGoogle();
-      if (res.success) {
-        onClose();
-      } else {
-        if (res.needsDirectGoogle) {
-          setShowGoogleEmailInput(true);
-          setGoogleEmailValue(email || 'wilfriedcrea@gmail.com');
-        } else {
-          setErrorMessage(res.message);
-        }
-      }
-    } catch (err: any) {
-      setShowGoogleEmailInput(true);
-      setGoogleEmailValue(email || 'wilfriedcrea@gmail.com');
-    } finally {
-      setLoading(false);
-    }
+    setShowGoogleEmailInput(true);
+    setGoogleEmailValue(email || 'wilfriedcrea@gmail.com');
   };
 
   const handleDirectGoogleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +88,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
     setLoading(true);
     try {
-      const res = await loginAsGoogleDirect(googleEmailValue.trim());
+      const res = await loginAsGoogleDirect(googleEmailValue.trim(), googleNameValue.trim() || undefined);
       if (res.success) {
         onClose();
       } else {
@@ -261,12 +245,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {/* Option 2: Autre compte Google */}
             <form onSubmit={handleDirectGoogleSubmit} className="space-y-2.5 pt-1">
               <div>
-                <label className="text-[11px] text-slate-400 block mb-1 font-bold">Autre adresse Google</label>
+                <label className="text-[11px] text-slate-400 block mb-1 font-bold">Votre adresse Google / Gmail</label>
                 <div className="relative flex items-center">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5" />
                   <input
                     type="email"
-                    placeholder="votre.adresse@gmail.com"
+                    placeholder="ex: lecteur@gmail.com"
                     value={googleEmailValue}
                     onChange={(e) => setGoogleEmailValue(e.target.value)}
                     className="w-full bg-[#1c1e2e] border border-white/10 text-white text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#4285F4]"
@@ -274,13 +258,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1 font-bold">Pseudo (facultatif)</label>
+                <div className="relative flex items-center">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
+                  <input
+                    type="text"
+                    placeholder="Votre pseudo sur OZI"
+                    value={googleNameValue}
+                    onChange={(e) => setGoogleNameValue(e.target.value)}
+                    className="w-full bg-[#1c1e2e] border border-white/10 text-white text-xs pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-[#4285F4]"
+                  />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-[#4285F4] hover:bg-[#3367D6] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-[#4285F4] hover:bg-[#3367D6] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 mt-1"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Se connecter avec cette adresse</span>
+                <span>Se connecter avec Google</span>
               </button>
             </form>
 
