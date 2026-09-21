@@ -112,8 +112,8 @@ interface OziContextType {
 
   // Comments
   comments: Comment[];
-  addComment: (chapterId: string, workId: string, text: string, isSpoiler?: boolean) => { success: boolean; message?: string };
-  addCommentReply: (commentId: string, text: string) => { success: boolean; message?: string };
+  addComment: (chapterId: string, workId: string, text: string, isSpoiler?: boolean) => Promise<{ success: boolean; message?: string }>;
+  addCommentReply: (commentId: string, text: string) => Promise<{ success: boolean; message?: string }>;
   likeComment: (commentId: string) => void;
   likeCommentReply: (commentId: string, replyId: string) => void;
   reportComment: (commentId: string) => void;
@@ -134,7 +134,7 @@ interface OziContextType {
 
   // Newsletter
   subscribers: NewsletterSubscriber[];
-  subscribeNewsletter: (email: string, source?: string) => { success: boolean; message: string };
+  subscribeNewsletter: (email: string, source?: string) => Promise<{ success: boolean; message: string }>;
   unsubscribeNewsletter: (email: string) => void;
 
   // Monetization & Coins (Orange Money, Wave, Cards)
@@ -182,8 +182,18 @@ const STORAGE_KEYS = {
 
 function loadStorage<T>(key: string, defaultValue: T): T {
   try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return defaultValue;
+    }
     const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    if (!item || item === 'undefined' || item === 'null') {
+      return defaultValue;
+    }
+    const parsed = JSON.parse(item);
+    if (parsed === null || parsed === undefined) {
+      return defaultValue;
+    }
+    return parsed;
   } catch {
     return defaultValue;
   }
@@ -191,7 +201,9 @@ function loadStorage<T>(key: string, defaultValue: T): T {
 
 function saveStorage<T>(key: string, data: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
   } catch (e) {
     console.error('Storage error', e);
   }
@@ -289,19 +301,31 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [works, setWorks] = useState<Work[]>(() => {
     const stored = loadStorage<Work[]>(STORAGE_KEYS.WORKS, INITIAL_WORKS);
     if (!Array.isArray(stored) || stored.length === 0) return INITIAL_WORKS;
-    return stored.map((w) => sanitizeWorkData(w));
+    const valid = stored.filter(Boolean).map((w) => sanitizeWorkData(w));
+    return valid.length > 0 ? valid : INITIAL_WORKS;
   });
   const [chapters, setChapters] = useState<Chapter[]>(() => {
     const stored = loadStorage<Chapter[]>(STORAGE_KEYS.CHAPTERS, INITIAL_CHAPTERS);
     if (!Array.isArray(stored) || stored.length === 0) return INITIAL_CHAPTERS;
-    return stored.map((c) => sanitizeChapterData(c));
+    const valid = stored.filter(Boolean).map((c) => sanitizeChapterData(c));
+    return valid.length > 0 ? valid : INITIAL_CHAPTERS;
   });
-  const [comments, setComments] = useState<Comment[]>(() => loadStorage(STORAGE_KEYS.COMMENTS, INITIAL_COMMENTS));
-  const [games, setGames] = useState<Game[]>(() => loadStorage(STORAGE_KEYS.GAMES, INITIAL_GAMES));
-  const [articles, setArticles] = useState<Article[]>(() => loadStorage(STORAGE_KEYS.ARTICLES, INITIAL_ARTICLES));
-  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(() =>
-    loadStorage(STORAGE_KEYS.SUBSCRIBERS, INITIAL_SUBSCRIBERS)
-  );
+  const [comments, setComments] = useState<Comment[]>(() => {
+    const stored = loadStorage(STORAGE_KEYS.COMMENTS, INITIAL_COMMENTS);
+    return Array.isArray(stored) && stored.length > 0 ? stored.filter(Boolean) : INITIAL_COMMENTS;
+  });
+  const [games, setGames] = useState<Game[]>(() => {
+    const stored = loadStorage(STORAGE_KEYS.GAMES, INITIAL_GAMES);
+    return Array.isArray(stored) && stored.length > 0 ? stored.filter(Boolean) : INITIAL_GAMES;
+  });
+  const [articles, setArticles] = useState<Article[]>(() => {
+    const stored = loadStorage(STORAGE_KEYS.ARTICLES, INITIAL_ARTICLES);
+    return Array.isArray(stored) && stored.length > 0 ? stored.filter(Boolean) : INITIAL_ARTICLES;
+  });
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(() => {
+    const stored = loadStorage(STORAGE_KEYS.SUBSCRIBERS, INITIAL_SUBSCRIBERS);
+    return Array.isArray(stored) && stored.length > 0 ? stored.filter(Boolean) : INITIAL_SUBSCRIBERS;
+  });
 
   // Helper check admin
   const isWilfriedAdmin = (email?: string | null, role?: string): boolean => {
@@ -1554,19 +1578,22 @@ export const OziProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Derived states
-  const currentWork = works.find((w) => w.id === selectedWorkId) || works[0] || INITIAL_WORKS[0];
-  const workChapters = chapters.filter((c) => c.workId === (currentWork?.id || 'work-1'));
+  const safeWorks = Array.isArray(works) && works.length > 0 ? works.filter(Boolean) : INITIAL_WORKS;
+  const currentWork = safeWorks.find((w) => w?.id === selectedWorkId) || safeWorks[0] || INITIAL_WORKS[0];
+  const safeChapters = Array.isArray(chapters) && chapters.length > 0 ? chapters.filter(Boolean) : INITIAL_CHAPTERS;
+  const workChapters = safeChapters.filter((c) => c && c.workId === (currentWork?.id || 'work-1'));
   const currentChapter =
-    chapters.find((c) => c.id === selectedChapterId) ||
+    safeChapters.find((c) => c?.id === selectedChapterId) ||
     workChapters[0] ||
-    chapters[0] ||
+    safeChapters[0] ||
     INITIAL_CHAPTERS[0];
 
   const isBookmarked = (workId: string) => {
+    if (!workId) return false;
     return !!currentUser?.bookmarks?.includes(workId);
   };
 
-  const bookmarkedWorks = works.filter((w) => currentUser?.bookmarks?.includes(w.id));
+  const bookmarkedWorks = safeWorks.filter((w) => w && currentUser?.bookmarks?.includes(w.id));
 
   const deleteUserAccount = (userId?: string) => {
     const targetId = userId || currentUser?.id;

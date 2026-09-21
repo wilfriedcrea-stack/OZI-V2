@@ -131,7 +131,7 @@ export const ArticlesView: React.FC = () => {
   const filteredArticles = articles.filter((art) => {
     if (selectedCategory === 'all') return true;
     if (selectedCategory === 'Carnet') {
-      return art.category === 'Carnet' || art.category === 'Carnet de création';
+      return (art.category as string) === 'Carnet' || art.category === 'Carnet de création';
     }
     return art.category === selectedCategory;
   });

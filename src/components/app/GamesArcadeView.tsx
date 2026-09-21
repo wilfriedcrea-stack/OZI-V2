@@ -20,11 +20,13 @@ export const GamesArcadeView: React.FC = () => {
   const { games, selectedGameId, setSelectedGameId, setActiveView, openGame } = useOzi();
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  const enabledGames = games.filter((g) => g.isEnabled);
-  const currentGame = games.find((g) => g.id === selectedGameId);
+  const safeGames = Array.isArray(games) && games.length > 0 ? games.filter(Boolean) : [];
+  const enabledGames = safeGames.filter((g) => g && g.isEnabled !== false);
+  const currentGame = safeGames.find((g) => g && g.id === selectedGameId);
 
   const filteredGames = enabledGames.filter((g) => {
-    if (activeCategory !== 'all' && g.category !== activeCategory) return false;
+    if (!g) return false;
+    if (activeCategory !== 'all' && (g.category || '').toLowerCase() !== activeCategory.toLowerCase()) return false;
     return true;
   });
 

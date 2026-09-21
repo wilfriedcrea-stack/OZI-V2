@@ -288,7 +288,7 @@ export const PlayableGameModal: React.FC<PlayableGameModalProps> = ({ game, isOp
           {gameState === 'start' && (
             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center">
               <img
-                src={game.bannerUrl || game.coverUrl}
+                src={game.bannerUrl || game.coverUrl || game.thumbnail}
                 alt={game.title}
                 className="w-24 h-24 rounded-2xl object-cover border border-white/20 mb-3 shadow-lg shadow-[#ff5a50]/20"
               />

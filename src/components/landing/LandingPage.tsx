@@ -35,9 +35,9 @@ export const LandingPage: React.FC = () => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [selectedStore, setSelectedStore] = useState<'ios' | 'android'>('ios');
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = subscribeNewsletter(newsletterEmail, 'Landing Page Hero');
+    const res = await subscribeNewsletter(newsletterEmail, 'Landing Page Hero');
     setNewsletterStatus(res);
     if (res.success) {
       setNewsletterEmail('');
@@ -488,25 +488,38 @@ export const LandingPage: React.FC = () => {
             <h3 className="text-lg font-bold text-white mb-1">
               Télécharger OZI ({selectedStore === 'ios' ? 'iOS' : 'Android'})
             </h3>
-            <p className="text-xs text-slate-300 mb-5">
-              Scannez le QR Code pour installer la version mobile Flutter ou lancez la version web instantanée.
+            <p className="text-xs text-slate-300 mb-4">
+              {selectedStore === 'android'
+                ? "Téléchargez directement le fichier APK officiel ou scannez le QR code depuis votre smartphone."
+                : "Scannez le QR Code pour installer la version mobile ou lancez la version web instantanée."}
             </p>
 
             {/* Simulated QR Code */}
-            <div className="p-4 bg-white rounded-xl inline-block mb-5 shadow-md">
-              <div className="w-36 h-36 border-2 border-slate-900 flex flex-col items-center justify-center text-slate-900 font-mono text-[10px] text-center p-2">
-                <QrCode className="w-20 h-20 text-slate-900 mb-1" />
-                <span>OZI MOBILE APP</span>
+            <div className="p-3 bg-white rounded-xl inline-block mb-4 shadow-md">
+              <div className="w-32 h-32 border-2 border-slate-900 flex flex-col items-center justify-center text-slate-900 font-mono text-[10px] text-center p-2">
+                <QrCode className="w-16 h-16 text-slate-900 mb-1" />
+                <span className="font-bold">OZI ANDROID APK</span>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
+              {selectedStore === 'android' && (
+                <a
+                  href="/ozi-reader.apk"
+                  download="ozi-reader.apk"
+                  className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Télécharger l'APK OZI Reader (Dernière version)</span>
+                </a>
+              )}
+
               <button
                 onClick={() => {
                   setShowDownloadModal(false);
                   setActiveView('app_catalogue');
                 }}
-                className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl shadow transition-colors cursor-pointer"
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl border border-slate-700 transition-colors cursor-pointer"
               >
                 Tester la Web App sans installer
               </button>

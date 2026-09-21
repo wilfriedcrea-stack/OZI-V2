@@ -43,6 +43,7 @@ import { PlayableGameModal } from '../games/PlayableGameModal';
 import { NotificationsCenterModal } from '../common/NotificationsCenterModal';
 import { SearchModal } from '../app/SearchModal';
 import { notificationService } from '../../lib/notificationService';
+import { INITIAL_WORKS, INITIAL_GAMES, INITIAL_CHAPTERS } from '../../data/seedData';
 import { Game } from '../../types';
 
 export const MobileAppExperience: React.FC = () => {
@@ -141,8 +142,13 @@ export const MobileAppExperience: React.FC = () => {
     setCart([]);
   };
 
+  // Données sécurisées avec garanties de repli (évite tout crash TypeError)
+  const safeWorks = Array.isArray(works) && works.length > 0 ? works.filter(Boolean) : INITIAL_WORKS;
+  const safeGames = Array.isArray(games) && games.length > 0 ? games.filter(Boolean) : INITIAL_GAMES;
+  const safeChapters = Array.isArray(chapters) && chapters.length > 0 ? chapters.filter(Boolean) : INITIAL_CHAPTERS;
+
   // Liste des sections et genres pour l'Accueil
-  const uniqueGenres = Array.from(new Set(works.flatMap((w) => w?.genres || [])));
+  const uniqueGenres = Array.from(new Set(safeWorks.flatMap((w) => w?.genres || [])));
   const homePills = [
     { id: 'new', label: 'Nouveau' },
     { id: 'all', label: 'Tout' },
@@ -150,14 +156,15 @@ export const MobileAppExperience: React.FC = () => {
   ];
 
   // Filtrage des œuvres
-  const featuredWork = works.find((w) => w.featured) || works[0];
-  const popularWorks = works.slice(0, 5);
+  const featuredWork = safeWorks.find((w) => w?.featured) || safeWorks[0] || INITIAL_WORKS[0];
+  const popularWorks = safeWorks.slice(0, 5);
 
-  const filteredWorks = works.filter((w) => {
+  const filteredWorks = safeWorks.filter((w) => {
+    if (!w) return false;
     const matchesSearch = searchQuery
-      ? w.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ? (w.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         w.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        w.author?.toLowerCase().includes(searchQuery.toLowerCase())
+        (w.author || '').toLowerCase().includes(searchQuery.toLowerCase())
       : true;
     const matchesGenre =
       selectedGenre === 'new' || selectedGenre === 'all'
@@ -167,12 +174,13 @@ export const MobileAppExperience: React.FC = () => {
   });
 
   // Filtrage des jeux
-  const filteredGames = games.filter((g) => {
+  const filteredGames = safeGames.filter((g) => {
+    if (!g) return false;
     if (gameCategory === 'all') return true;
-    return g.category.toLowerCase() === gameCategory.toLowerCase();
+    return (g.category || '').toLowerCase() === (gameCategory || '').toLowerCase();
   });
 
-  const featuredGame = games[0];
+  const featuredGame = safeGames[0] || INITIAL_GAMES[0];
 
   // Si on est sur l'écran du lecteur immersif
   if (activeView === 'app_reader') {
@@ -422,8 +430,8 @@ export const MobileAppExperience: React.FC = () => {
                       className="relative mx-3.5 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-2xl cursor-pointer group tap-active border border-white/10"
                     >
                       <img
-                        src={featuredWork.coverUrl}
-                        alt={featuredWork.title}
+                        src={featuredWork?.coverUrl || INITIAL_WORKS[0].coverUrl}
+                        alt={featuredWork?.title || 'Webtoon'}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       
@@ -434,23 +442,23 @@ export const MobileAppExperience: React.FC = () => {
                           NOUVEAU
                         </span>
                         <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10">
-                          {featuredWork.genres?.[0] || 'Fantasy'}
+                          {featuredWork?.genres?.[0] || 'Fantasy'}
                         </span>
                       </div>
 
                       {/* Note en haut à droite */}
                       <div className="absolute top-4 right-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 text-amber-400 text-xs font-black">
                         <Star className="w-3.5 h-3.5 fill-amber-400" />
-                        <span>{featuredWork.rating}</span>
+                        <span>{featuredWork?.rating || 4.8}</span>
                       </div>
 
                       {/* Dégradé immersif & Titre */}
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0d0e15] via-[#0d0e15]/40 to-transparent flex flex-col justify-end p-5">
                         <div className="text-[11px] font-bold text-[#ff5a50] uppercase tracking-wider mb-1">
-                          Par {featuredWork.author}
+                          Par {featuredWork?.author || 'Auteur OZI'}
                         </div>
                         <h2 className="text-3xl sm:text-4xl font-black text-white font-almodobar drop-shadow-md leading-none mb-3 tracking-wide">
-                          {featuredWork.title}
+                          {featuredWork?.title || 'Titre OZI'}
                         </h2>
 
                         {/* Boutons d'action Hero */}
@@ -458,11 +466,11 @@ export const MobileAppExperience: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const featuredChapters = chapters.filter((c) => c.workId === featuredWork.id);
-                              const firstCh = featuredChapters?.[0] || chapters?.[0];
-                              if (firstCh) {
+                              const featuredChapters = safeChapters.filter((c) => c && c.workId === featuredWork?.id);
+                              const firstCh = featuredChapters?.[0] || safeChapters[0];
+                              if (firstCh && featuredWork) {
                                 openReader(featuredWork.id, firstCh.id);
-                              } else {
+                              } else if (featuredWork) {
                                 openWorkDetail(featuredWork.id);
                               }
                             }}
@@ -554,8 +562,8 @@ export const MobileAppExperience: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const workChapters = chapters.filter((c) => c.workId === work.id);
-                                const firstCh = workChapters?.[0] || chapters?.[0];
+                                const workChapters = safeChapters.filter((c) => c && c.workId === work.id);
+                                const firstCh = workChapters?.[0] || safeChapters[0];
                                 if (firstCh) {
                                   openReader(work.id, firstCh.id);
                                 } else {
@@ -624,8 +632,8 @@ export const MobileAppExperience: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const workChapters = chapters.filter((c) => c.workId === work.id);
-                                const firstCh = workChapters?.[0] || chapters?.[0];
+                                const workChapters = safeChapters.filter((c) => c && c.workId === work.id);
+                                const firstCh = workChapters?.[0] || safeChapters[0];
                                 if (firstCh) {
                                   openReader(work.id, firstCh.id);
                                 } else {
@@ -697,8 +705,8 @@ export const MobileAppExperience: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const workChapters = chapters.filter((c) => c.workId === work.id);
-                              const firstCh = workChapters?.[0] || chapters?.[0];
+                              const workChapters = safeChapters.filter((c) => c && c.workId === work.id);
+                              const firstCh = workChapters?.[0] || safeChapters[0];
                               if (firstCh) {
                                 openReader(work.id, firstCh.id);
                               } else {
@@ -772,8 +780,8 @@ export const MobileAppExperience: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const workChapters = chapters.filter((c) => c.workId === work.id);
-                              const firstCh = workChapters?.[0] || chapters?.[0];
+                              const workChapters = safeChapters.filter((c) => c && c.workId === work.id);
+                              const firstCh = workChapters?.[0] || safeChapters[0];
                               if (firstCh) {
                                 openReader(work.id, firstCh.id);
                               } else {
@@ -841,7 +849,7 @@ export const MobileAppExperience: React.FC = () => {
                 >
                   <div className="flex items-center gap-3.5 mb-3">
                     <img
-                      src={featuredGame.coverUrl}
+                      src={featuredGame.coverUrl || featuredGame.thumbnail}
                       alt={featuredGame.title}
                       className="w-16 h-16 rounded-2xl object-cover border border-purple-500/40 shadow"
                     />
@@ -850,7 +858,7 @@ export const MobileAppExperience: React.FC = () => {
                         ÉVÉNEMENT
                       </span>
                       <h3 className="text-sm font-black text-white truncate mt-0.5">{featuredGame.title}</h3>
-                      <p className="text-[10px] text-slate-400">{featuredGame.genre} • +500 Coins à gagner</p>
+                      <p className="text-[10px] text-slate-400">{featuredGame.genre || featuredGame.category || 'Arcade'} • +500 Coins à gagner</p>
                     </div>
                   </div>
                   <button className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow cursor-pointer tap-active flex items-center justify-center gap-1.5">
@@ -893,7 +901,7 @@ export const MobileAppExperience: React.FC = () => {
                   >
                     <div className="aspect-square bg-slate-900 relative">
                       <img
-                        src={game.coverUrl}
+                        src={game.coverUrl || game.thumbnail}
                         alt={game.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -907,7 +915,7 @@ export const MobileAppExperience: React.FC = () => {
                       <h4 className="text-xs font-bold text-white truncate">{game.title}</h4>
                       <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
                         <span className="capitalize">{game.category}</span>
-                        <span className="text-amber-400 font-bold">★ {game.rating}</span>
+                        <span className="text-amber-400 font-bold">★ {game.rating || 4.8}</span>
                       </div>
                     </div>
                   </div>

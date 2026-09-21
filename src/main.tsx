@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { OziProvider } from './context/OziContext.tsx';
+import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import './index.css';
 
 // Enregistrement du Service Worker pour le support PWA / APK
@@ -15,8 +16,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <OziProvider>
-      <App />
-    </OziProvider>
+    <ErrorBoundary>
+      <OziProvider>
+        <App />
+      </OziProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

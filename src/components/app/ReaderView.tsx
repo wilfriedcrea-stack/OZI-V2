@@ -740,7 +740,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ onOpenComments }) => {
                     >
                       <div className="truncate pr-2">
                         <span className="block truncate">
-                          {ch.title || `Épisode ${ch.chapterNumber || ch.number}`}
+                          {ch.title || `Épisode ${ch.chapterNumber || ch.number || 1}`}
                         </span>
                         <span className="text-[10px] opacity-75 font-normal">
                           {ch.releaseDate || 'Sortie récente'}

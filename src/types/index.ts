@@ -28,6 +28,7 @@ export interface Chapter {
   id: string;
   workId: string;
   chapterNumber: number;
+  number?: number; // Compatibilité alias
   title: string;
   releaseDate: string;
   pages: ChapterPage[];
@@ -35,6 +36,7 @@ export interface Chapter {
   dislikesCount: number;
   viewsCount: number;
   isFree: boolean;
+  isLocked?: boolean; // Compatibilité alias
   coinPrice?: number; // Price in OZI Coins for Fast-Pass (default: 5)
   audioUrl?: string; // OST / Ambiance musicale associée au chapitre (lecture en boucle)
   audioTitle?: string; // Titre du morceau / OST
@@ -59,6 +61,8 @@ export interface Work {
   featured: boolean;
   releaseYear: number;
   totalChapters: number;
+  chaptersCount?: number; // Compatibilité alias
+  chapters?: Chapter[]; // Compatibilité alias
   ageRating: string; // e.g. "Tous publics", "12+", "16+"
   updatedAt: string;
   createdAt: string;
@@ -98,6 +102,11 @@ export interface Game {
   title: string;
   description: string;
   thumbnail: string;
+  coverUrl?: string; // Compatibilité alias
+  bannerUrl?: string; // Compatibilité alias
+  genre?: string; // Compatibilité alias
+  rating?: number; // Compatibilité alias
+  isPlayable?: boolean; // Compatibilité alias
   category: 'Arcade' | 'Puzzle' | 'Quiz' | 'Action' | 'Mémoire';
   developer: string;
   playsCount: number;
@@ -125,6 +134,7 @@ export interface ReadHistoryItem {
   workId: string;
   chapterId: string;
   chapterNumber: number;
+  pageIndex?: number; // Compatibilité alias
   readAt: string;
   progressPercent: number;
 }
@@ -195,4 +205,5 @@ export type ActiveAppView =
   | 'app_library'
   | 'landing'
   | 'admin'
+  | 'admin_dashboard'
   | 'legal';

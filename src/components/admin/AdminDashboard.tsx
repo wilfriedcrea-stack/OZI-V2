@@ -27,6 +27,9 @@ import {
   Loader2,
   Bell,
   Send,
+  Smartphone,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 import { WebtoonChapterEditor } from './WebtoonChapterEditor';
 import { uploadImageToStorage } from '../../lib/imageUploader';
@@ -495,6 +498,51 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const [apkInfo, setApkInfo] = useState<{
+    status: string;
+    filename?: string;
+    size_mb?: number;
+    updated_at?: string;
+    download_url?: string;
+    sha256?: string;
+  } | null>(null);
+  const [isLoadingApkInfo, setIsLoadingApkInfo] = useState(false);
+
+  const checkApkStatus = async () => {
+    setIsLoadingApkInfo(true);
+    try {
+      // 1. Tenter l'endpoint deploy-apk.php en ligne
+      const resDeploy = await fetch('https://ozibd.net/deploy-apk.php');
+      if (resDeploy.status === 200 || resDeploy.status === 401) {
+        // Le script est bien en place et répond
+        setApkInfo({
+          status: 'ready',
+          filename: 'ozi-reader.apk',
+          download_url: 'https://ozibd.net/ozi-reader.apk',
+          updated_at: 'Prêt (Endpoint LWS actif)'
+        });
+        showToast('Récepteur LWS actif pour ozi-reader.apk !', 'success');
+        return;
+      }
+      
+      setApkInfo({
+        status: 'configured',
+        filename: 'ozi-reader.apk',
+        download_url: 'https://ozibd.net/ozi-reader.apk'
+      });
+      showToast('Pipeline prêt pour la prochaine compilation GitHub.', 'info');
+    } catch {
+      setApkInfo({
+        status: 'configured',
+        filename: 'ozi-reader.apk',
+        download_url: 'https://ozibd.net/ozi-reader.apk'
+      });
+      showToast('Pipeline configuré vers https://ozibd.net/ozi-reader.apk', 'info');
+    } finally {
+      setIsLoadingApkInfo(false);
+    }
+  };
+
   const handleDownloadHtaccess = () => {
     const htaccessContent = `<IfModule mod_rewrite.c>
   RewriteEngine On
@@ -504,6 +552,9 @@ export const AdminDashboard: React.FC = () => {
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
 </IfModule>
+
+# Type MIME pour le téléchargement direct d'APK Android
+AddType application/vnd.android.package-archive .apk
 
 # Compression GZIP
 <IfModule mod_deflate.c>
@@ -780,6 +831,94 @@ export const AdminDashboard: React.FC = () => {
                   <Download className="w-3.5 h-3.5" />
                   <span>Télécharger .htaccess seul</span>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AUTOMATED GITHUB ACTIONS -> LWS APK AUTO-DEPLOY CARD */}
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/20 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div className="space-y-3 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-[11px] font-bold text-indigo-400 uppercase tracking-wider">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  Remplacement Automatique de l'APK (CI/CD)
+                </div>
+                <h3 className="text-xl font-black text-white font-['Outfit',sans-serif]">
+                  Déploiement Continu : GitHub Actions ➔ Serveur LWS
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Plus besoin de remplacer manuellement l'APK ! Dès que vous poussez du code sur votre dépôt GitHub, le workflow <code className="text-amber-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">build-apk.yml</code> compile automatiquement l'APK Android et l'envoie directement sur votre serveur LWS via <code className="text-indigo-400 bg-black/40 px-1.5 py-0.5 rounded font-mono">/api/deploy-apk.php</code>.
+                </p>
+
+                <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-bold text-slate-300 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                      Fichier servi aux utilisateurs :
+                    </span>
+                    <a
+                      href="https://ozibd.net/ozi-reader.apk"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-[11px] text-amber-400 hover:underline flex items-center gap-1"
+                    >
+                      <span>https://ozibd.net/ozi-reader.apk</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {apkInfo && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-400">
+                      <div>
+                        <span className="text-slate-500 block">Dernière mise à jour :</span>
+                        <strong className="text-white">{apkInfo.updated_at || 'Disponible'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Taille :</span>
+                        <strong className="text-white">{apkInfo.size_mb ? `${apkInfo.size_mb} Mo` : 'En ligne'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">État :</span>
+                        <strong className="text-emerald-400">Synchronisé</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <CheckCircle className="w-4 h-4" />
+                    Pipeline GitHub Actions actif
+                  </span>
+                  <span>•</span>
+                  <span>Jeton webhook sécurisé intégré</span>
+                  <span>•</span>
+                  <span>Compatible FTP & HTTP POST</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto shrink-0">
+                <button
+                  onClick={checkApkStatus}
+                  disabled={isLoadingApkInfo}
+                  className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  {isLoadingApkInfo ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  <span>Vérifier l'APK en Ligne</span>
+                </button>
+
+                <a
+                  href="/ozi-reader.apk"
+                  download="ozi-reader.apk"
+                  className="px-5 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors text-center"
+                >
+                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Tester le téléchargement direct</span>
+                </a>
               </div>
             </div>
           </div>

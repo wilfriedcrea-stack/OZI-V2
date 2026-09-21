@@ -49,7 +49,9 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
   const [chapterTitle, setChapterTitle] = useState<string>(
     chapterToEdit ? chapterToEdit.title : `Épisode ${existingWorkChapters.length + 1}`
   );
-  const [isFree, setIsFree] = useState<boolean>(chapterToEdit ? !chapterToEdit.isLocked : true);
+  const [isFree, setIsFree] = useState<boolean>(
+    chapterToEdit ? (chapterToEdit.isFree !== undefined ? chapterToEdit.isFree : !chapterToEdit.isLocked) : true
+  );
   const [coinPrice, setCoinPrice] = useState<number>(chapterToEdit?.coinPrice || 5);
   const [audioUrl, setAudioUrl] = useState<string>(chapterToEdit?.audioUrl || '');
   const [audioTitle, setAudioTitle] = useState<string>(chapterToEdit?.audioTitle || '');
@@ -227,6 +229,7 @@ export const WebtoonChapterEditor: React.FC<WebtoonChapterEditorProps> = ({
       chapterNumber,
       title: chapterTitle,
       pages: slices,
+      isFree,
       isLocked: !isFree,
       coinPrice: isFree ? 0 : coinPrice,
       audioUrl: cleanedAudioUrl,

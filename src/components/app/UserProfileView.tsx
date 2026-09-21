@@ -419,7 +419,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
                           </p>
                           <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-bold mt-1">
                             <Play className="w-2.5 h-2.5 fill-emerald-400" />
-                            <span>Page {item.pageIndex + 1} • Reprendre</span>
+                            <span>Page {(item.pageIndex ?? 0) + 1} • Reprendre</span>
                           </div>
                         </div>
                       </div>
@@ -455,7 +455,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ initialTab = '
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 font-mono text-xs font-black">
-                          #{chap.number}
+                          #{chap.chapterNumber || chap.number || 1}
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs font-bold text-white truncate">{chap.title}</div>

@@ -258,7 +258,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
                         </span>
                         <span>•</span>
                         <span className="text-slate-300 font-medium">
-                          {work.chaptersCount || work.chapters?.length || 0} ch.
+                          {work.totalChapters || work.chaptersCount || work.chapters?.length || 0} ch.
                         </span>
                         <span>•</span>
                         <span className="text-slate-400 truncate">

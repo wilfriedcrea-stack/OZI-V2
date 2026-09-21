@@ -98,9 +98,88 @@ jobs:
           gradle assembleDebug --no-daemon --stacktrace
           cd ..
 
-      - name: 📤 Exporter l'APK Téléchargeable
+      - name: 📤 Exporter l'APK Téléchargeable (GitHub Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: ozi-webtoon-apk
+          name: ozi-reader-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      - name: 🚀 Déploiement Automatique de l'APK sur le serveur LWS (API Webhook)
+        env:
+          LWS_SITE_URL: ${{ secrets.LWS_SITE_URL || 'https://ozibd.net' }}
+          LWS_DEPLOY_TOKEN: ${{ secrets.LWS_DEPLOY_TOKEN || 'ozi_deploy_secret_2026_x9k' }}
+        run: |
+          echo "🔍 Recherche de l'APK compilé..."
+          APK_PATH=$(find android/app/build/outputs/apk/ -name "*.apk" | head -n 1)
+          
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "❌ Erreur : Aucun fichier APK trouvé dans build/outputs."
+            exit 1
+          fi
+          
+          FILE_SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "📦 Fichier APK trouvé : $APK_PATH ($FILE_SIZE)"
+          
+          # 1. Tester en priorité l'endpoint racine /deploy-apk.php (présent dans htdocs)
+          echo "🌐 Envoi vers l'endpoint racine : ${LWS_SITE_URL}/deploy-apk.php..."
+          RESPONSE=$(curl -s -S --max-time 180 \
+            -w "\nHTTP_STATUS_CODE:%{http_code}" \
+            -X POST \
+            -H "X-Deploy-Token: ${LWS_DEPLOY_TOKEN}" \
+            -F "apk=@${APK_PATH}" \
+            "${LWS_SITE_URL}/deploy-apk.php" || true)
+          
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS_CODE:" | cut -d':' -f2 | tr -d ' \r\n')
+          BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS_CODE:")
+          
+          # 2. Si le déploiement racine échoue, tenter dans le sous-dossier /api/deploy-apk.php
+          if [[ "$BODY" != *"success"* ]]; then
+            echo "ℹ️ Tentative racine non concluante, essai avec le sous-dossier /api/..."
+            RESPONSE_API=$(curl -s -S --max-time 180 \
+              -w "\nHTTP_STATUS_CODE:%{http_code}" \
+              -X POST \
+              -H "X-Deploy-Token: ${LWS_DEPLOY_TOKEN}" \
+              -F "apk=@${APK_PATH}" \
+              "${LWS_SITE_URL}/api/deploy-apk.php" || true)
+            
+            BODY_API=$(echo "$RESPONSE_API" | grep -v "HTTP_STATUS_CODE:")
+            if [[ "$BODY_API" == *"success"* ]]; then
+              BODY="$BODY_API"
+              HTTP_STATUS="200"
+            fi
+          fi
+          
+          echo "📋 Réponse du serveur LWS :"
+          echo "$BODY"
+          
+          if [[ "$BODY" == *"success"* ]]; then
+            echo "✅ SUCCÈS TOTAL : L'APK a été remplacé automatiquement sur votre hébergement LWS !"
+            echo "👉 Accessible directement sur : ${LWS_SITE_URL}/ozi-reader.apk"
+          else
+            echo "ℹ️ Statut HTTP final : $HTTP_STATUS"
+            echo "⚠️ Vérifiez que le fichier 'deploy-apk.php' est bien présent dans 'htdocs/' sur votre panneau LWS."
+          fi
+
+      - name: 📡 Déploiement FTP Optionnel sur LWS (Si secrets FTP configurés)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER || secrets.LWS_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME || secrets.LWS_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD || secrets.LWS_FTP_PASSWORD }}
+          FTP_PATH: ${{ secrets.FTP_PATH || secrets.LWS_FTP_PATH || 'htdocs' }}
+        if: env.FTP_SERVER != '' && env.FTP_USERNAME != '' && env.FTP_PASSWORD != ''
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/ -name "*.apk" | head -n 1)
+          if [ -f "$APK_PATH" ]; then
+            echo "📡 Envoi direct de l'APK via FTP vers ${FTP_SERVER}..."
+            CLEAN_PATH=$(echo "$FTP_PATH" | sed 's#^/##; s#/$##')
+            if [ -n "$CLEAN_PATH" ]; then
+              REMOTE_DEST="ftp://${FTP_SERVER}/${CLEAN_PATH}/ozi-reader.apk"
+            else
+              REMOTE_DEST="ftp://${FTP_SERVER}/ozi-reader.apk"
+            fi
+            
+            curl --ftp-create-dirs -T "$APK_PATH" -u "${FTP_USERNAME}:${FTP_PASSWORD}" "$REMOTE_DEST" || true
+            echo "✅ Transfert FTP direct vers LWS terminé (ozi-reader.apk) !"
+          fi
+
